@@ -51,8 +51,15 @@ func runDeploy(ctx context.Context, providerName, modelName string) error {
 	}
 	fmt.Printf("Restricting port 11434 to: %s\n\n", userIP)
 
-	apiKey := generateAPIKey()
-	deploymentID := generateDeploymentID()
+	apiKey, err := generateAPIKey()
+	if err != nil {
+		return fmt.Errorf("generate API key: %w", err)
+	}
+
+	deploymentID, err := generateDeploymentID()
+	if err != nil {
+		return fmt.Errorf("generate deployment ID: %w", err)
+	}
 
 	fmt.Printf("Deploying %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
 
@@ -150,14 +157,18 @@ func waitForOllama(ctx context.Context, endpoint, model, apiKey string) error {
 	return fmt.Errorf("timed out after 15 minutes")
 }
 
-func generateAPIKey() string {
+func generateAPIKey() (string, error) {
 	b := make([]byte, 18)
-	rand.Read(b)
-	return "sk-haven-" + hex.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return "sk-haven-" + hex.EncodeToString(b), nil
 }
 
-func generateDeploymentID() string {
+func generateDeploymentID() (string, error) {
 	b := make([]byte, 4)
-	rand.Read(b)
-	return "haven-" + hex.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return "haven-" + hex.EncodeToString(b), nil
 }

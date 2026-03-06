@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -73,13 +74,18 @@ func (s *S3StateStore) List(ctx context.Context) ([]provider.Deployment, error) 
 		return nil, err
 	}
 	var deployments []provider.Deployment
+	var loadErr error
 	for _, obj := range out.Contents {
 		id := strings.TrimSuffix(strings.TrimPrefix(awssdk.ToString(obj.Key), "deployments/"), ".json")
 		d, err := s.Load(ctx, id)
 		if err != nil {
+			loadErr = errors.Join(loadErr, fmt.Errorf("load deployment %q: %w", id, err))
 			continue
 		}
 		deployments = append(deployments, *d)
+	}
+	if loadErr != nil {
+		return deployments, loadErr
 	}
 	return deployments, nil
 }
