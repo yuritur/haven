@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+The less code and changes, the better, as long as it doesn't interfere with functionality.
+Less fluff, more direct. Don’t reload license files, changelogs, or notes unless necessary.
+README.md stays concise and focused.

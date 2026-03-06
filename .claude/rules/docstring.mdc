@@ -1,0 +1,12 @@
+---
+alwaysApply: true
+---
+
+Write self-explanatory code.
+
+- Do NOT write docstrings by default.
+- Add a docstring/comment ONLY if behavior is non-obvious, tricky, or surprising.
+- Never explain what is already clear from names and types.
+- Keep docstrings short (1–4 lines), focus on "why", not "what".
+- Prefer clear naming and small functions over documentation.
+- Do not produce large documentation blocks unless explicitly asked.
