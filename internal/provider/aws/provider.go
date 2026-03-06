@@ -1,0 +1,68 @@
+package aws
+
+import (
+	"context"
+
+	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+
+	"github.com/havenapp/haven/internal/provider"
+	"github.com/havenapp/haven/internal/provider/aws/cfn"
+)
+
+// AWSProvider implements provider.Provider using CloudFormation.
+type AWSProvider struct {
+	cfg      awssdk.Config
+	identity provider.Identity
+}
+
+// New creates an AWSProvider and S3StateStore, validating credentials eagerly.
+func New(ctx context.Context) (*AWSProvider, *S3StateStore, error) {
+	cfg, err := loadConfig(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	id, err := getIdentity(ctx, cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	store, err := newS3StateStore(ctx, cfg, id.AccountID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &AWSProvider{
+		cfg: cfg,
+		identity: provider.Identity{
+			AccountID: id.AccountID,
+			Region:    id.Region,
+		},
+	}, store, nil
+}
+
+func (p *AWSProvider) Identity(_ context.Context) (provider.Identity, error) {
+	return p.identity, nil
+}
+
+func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error) {
+	result, err := cfn.Deploy(ctx, p.cfg, cfn.DeployInput{
+		StackName:    input.DeploymentID,
+		Model:        input.Model,
+		InstanceType: input.InstanceType,
+		UserIP:       input.UserIP,
+		APIKey:       input.APIKey,
+	})
+	if err != nil {
+		return provider.DeployResult{}, err
+	}
+	return provider.DeployResult{
+		ProviderRef: result.StackName,
+		InstanceID:  result.InstanceID,
+		PublicIP:    result.PublicIP,
+	}, nil
+}
+
+func (p *AWSProvider) Destroy(ctx context.Context, providerRef string) error {
+	return cfn.Destroy(ctx, p.cfg, providerRef)
+}
