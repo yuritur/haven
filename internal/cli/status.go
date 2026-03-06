@@ -5,32 +5,26 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	havnaws "github.com/havenapp/haven/internal/aws"
-	"github.com/havenapp/haven/internal/state"
 )
 
-var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "List active deployments",
-	Args:  cobra.NoArgs,
-	RunE:  runStatus,
+func newStatusCmd(providerName *string) *cobra.Command {
+	return &cobra.Command{
+		Use:   "status",
+		Short: "List active deployments",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runStatus(cmd.Context(), *providerName)
+		},
+	}
 }
 
-func runStatus(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
-
-	cfg, err := havnaws.LoadConfig(ctx)
+func runStatus(ctx context.Context, providerName string) error {
+	_, store, err := buildProviderAndStore(ctx, providerName)
 	if err != nil {
 		return err
 	}
 
-	stateManager, err := state.NewManager(ctx, cfg)
-	if err != nil {
-		return fmt.Errorf("load state: %w", err)
-	}
-
-	deployments, err := stateManager.List(ctx)
+	deployments, err := store.List(ctx)
 	if err != nil {
 		return fmt.Errorf("list deployments: %w", err)
 	}
@@ -40,10 +34,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	fmt.Printf("%-20s  %-14s  %-12s  %s\n", "ID", "MODEL", "INSTANCE", "ENDPOINT")
-	fmt.Printf("%-20s  %-14s  %-12s  %s\n", "--------------------", "--------------", "------------", "--------")
+	fmt.Printf("%-20s  %-6s  %-14s  %-12s  %s\n", "ID", "CLOUD", "MODEL", "INSTANCE", "ENDPOINT")
+	fmt.Printf("%-20s  %-6s  %-14s  %-12s  %s\n", "--------------------", "------", "--------------", "------------", "--------")
 	for _, d := range deployments {
-		fmt.Printf("%-20s  %-14s  %-12s  %s\n", d.ID, d.Model, d.InstanceType, d.Endpoint)
+		fmt.Printf("%-20s  %-6s  %-14s  %-12s  %s\n", d.ID, d.Provider, d.Model, d.InstanceType, d.Endpoint)
 	}
 	return nil
 }

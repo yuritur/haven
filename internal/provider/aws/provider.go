@@ -9,14 +9,14 @@ import (
 	"github.com/havenapp/haven/internal/provider/aws/cfn"
 )
 
-// AWSProvider implements provider.Provider using CloudFormation.
 type AWSProvider struct {
 	cfg      awssdk.Config
 	identity provider.Identity
 }
 
-// New creates an AWSProvider and S3StateStore, validating credentials eagerly.
-func New(ctx context.Context) (*AWSProvider, *S3StateStore, error) {
+var _ provider.Provider = (*AWSProvider)(nil)
+
+func New(ctx context.Context) (provider.Provider, provider.StateStore, error) {
 	cfg, err := loadConfig(ctx)
 	if err != nil {
 		return nil, nil, err

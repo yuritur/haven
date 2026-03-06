@@ -5,49 +5,41 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	havnaws "github.com/havenapp/haven/internal/aws"
-	"github.com/havenapp/haven/internal/cfn"
-	"github.com/havenapp/haven/internal/state"
 )
 
-var destroyCmd = &cobra.Command{
-	Use:     "destroy <deployment-id>",
-	Short:   "Destroy a deployment and release all AWS resources",
-	Example: "  haven destroy haven-a1b2c3d4",
-	Args:    cobra.ExactArgs(1),
-	RunE:    runDestroy,
+func newDestroyCmd(providerName *string) *cobra.Command {
+	return &cobra.Command{
+		Use:     "destroy <deployment-id>",
+		Short:   "Destroy a deployment and release all cloud resources",
+		Example: "  haven destroy haven-a1b2c3d4",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runDestroy(cmd.Context(), *providerName, args[0])
+		},
+	}
 }
 
-func runDestroy(cmd *cobra.Command, args []string) error {
-	deploymentID := args[0]
-	ctx := context.Background()
-
-	cfg, err := havnaws.LoadConfig(ctx)
+func runDestroy(ctx context.Context, providerName, deploymentID string) error {
+	prov, store, err := buildProviderAndStore(ctx, providerName)
 	if err != nil {
 		return err
 	}
 
-	stateManager, err := state.NewManager(ctx, cfg)
-	if err != nil {
-		return fmt.Errorf("load state manager: %w", err)
-	}
-
-	deployment, err := stateManager.Load(ctx, deploymentID)
+	deployment, err := store.Load(ctx, deploymentID)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("Destroying %s (%s on %s)...\n\n", deployment.ID, deployment.Model, deployment.InstanceType)
 
-	if err := cfn.Destroy(ctx, cfg, deployment.StackName); err != nil {
-		return fmt.Errorf("CloudFormation destroy: %w", err)
+	if err := prov.Destroy(ctx, deployment.ProviderRef); err != nil {
+		return fmt.Errorf("destroy: %w", err)
 	}
 
-	if err := stateManager.Delete(ctx, deploymentID); err != nil {
+	if err := store.Delete(ctx, deploymentID); err != nil {
 		fmt.Printf("Warning: failed to delete state for %s: %v\n", deploymentID, err)
 	}
 
-	fmt.Printf("\nDestroyed %s. All AWS resources released.\n", deploymentID)
+	fmt.Printf("\nDestroyed %s. All resources released.\n", deploymentID)
 	return nil
 }

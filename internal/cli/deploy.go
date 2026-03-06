@@ -12,44 +12,38 @@ import (
 
 	"github.com/spf13/cobra"
 
-	havnaws "github.com/havenapp/haven/internal/aws"
-	"github.com/havenapp/haven/internal/cfn"
 	"github.com/havenapp/haven/internal/models"
-	"github.com/havenapp/haven/internal/state"
+	"github.com/havenapp/haven/internal/provider"
 )
 
-var deployCmd = &cobra.Command{
-	Use:   "deploy <model>",
-	Short: "Deploy a model to AWS",
-	Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runDeploy,
+func newDeployCmd(providerName *string) *cobra.Command {
+	return &cobra.Command{
+		Use:     "deploy <model>",
+		Short:   "Deploy a model to your cloud",
+		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --provider aws",
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runDeploy(cmd.Context(), *providerName, args[0])
+		},
+	}
 }
 
-func runDeploy(cmd *cobra.Command, args []string) error {
-	modelName := args[0]
-	ctx := context.Background()
-
+func runDeploy(ctx context.Context, providerName, modelName string) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
 	}
 
-	cfg, err := havnaws.LoadConfig(ctx)
+	prov, store, err := buildProviderAndStore(ctx, providerName)
 	if err != nil {
 		return err
 	}
 
-	identity, err := havnaws.GetIdentity(ctx, cfg)
+	identity, err := prov.Identity(ctx)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Account: %s  Region: %s\n", identity.AccountID, identity.Region)
-
-	stateManager, err := state.NewManager(ctx, cfg)
-	if err != nil {
-		return fmt.Errorf("bootstrap state bucket: %w", err)
-	}
+	fmt.Printf("Provider: %s  Account: %s  Region: %s\n", providerName, identity.AccountID, identity.Region)
 
 	userIP, err := detectPublicIP()
 	if err != nil {
@@ -58,15 +52,16 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Restricting port 11434 to: %s\n\n", userIP)
 
 	apiKey := generateAPIKey()
-	stackName := generateStackName()
+	deploymentID := generateDeploymentID()
 
-	fmt.Printf("Deploying %s on %s (stack: %s)...\n\n", modelName, modelCfg.InstanceType, stackName)
+	fmt.Printf("Deploying %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
 
-	result, err := cfn.Deploy(ctx, cfg, cfn.DeployInput{
-		StackName: stackName,
-		Model:     modelCfg.OllamaTag,
-		UserIP:    userIP + "/32",
-		APIKey:    apiKey,
+	result, err := prov.Deploy(ctx, provider.DeployInput{
+		DeploymentID: deploymentID,
+		Model:        modelCfg.OllamaTag,
+		InstanceType: modelCfg.InstanceType,
+		UserIP:       userIP + "/32",
+		APIKey:       apiKey,
 	})
 	if err != nil {
 		return fmt.Errorf("deploy: %w", err)
@@ -79,20 +74,21 @@ func runDeploy(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("waiting for Ollama: %w", err)
 	}
 
-	deployment := state.Deployment{
-		ID:           stackName,
+	deployment := provider.Deployment{
+		ID:           deploymentID,
+		Provider:     providerName,
+		ProviderRef:  result.ProviderRef,
 		CreatedAt:    time.Now().UTC(),
 		Region:       identity.Region,
-		StackName:    stackName,
 		Model:        modelName,
 		InstanceType: modelCfg.InstanceType,
 		InstanceID:   result.InstanceID,
-		EIP:          result.PublicIP,
+		PublicIP:     result.PublicIP,
 		Endpoint:     endpoint + "/v1",
 		APIKey:       apiKey,
 	}
 
-	if err := stateManager.Save(ctx, deployment); err != nil {
+	if err := store.Save(ctx, deployment); err != nil {
 		return fmt.Errorf("save state: %w", err)
 	}
 
@@ -160,7 +156,7 @@ func generateAPIKey() string {
 	return "sk-haven-" + hex.EncodeToString(b)
 }
 
-func generateStackName() string {
+func generateDeploymentID() string {
 	b := make([]byte, 4)
 	rand.Read(b)
 	return "haven-" + hex.EncodeToString(b)
