@@ -2,8 +2,8 @@ package certutil_test
 
 import (
 	"crypto/tls"
-	"crypto/x509"
-	"encoding/pem"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,12 +28,8 @@ func TestGenerateSelfSigned(t *testing.T) {
 		t.Error("fingerprint is empty")
 	}
 
-	block, _ := pem.Decode([]byte(certPEM))
-	if block == nil {
-		t.Fatal("certPEM does not contain a valid PEM block")
-	}
-	if _, err := x509.ParseCertificate(block.Bytes); err != nil {
-		t.Errorf("certPEM does not parse as x509 certificate: %v", err)
+	if _, err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM)); err != nil {
+		t.Fatalf("key pair not valid: %v", err)
 	}
 
 	if len(fingerprint) != 64 {
@@ -55,25 +51,16 @@ func TestNewPinnedTransport(t *testing.T) {
 		t.Fatalf("GenerateSelfSigned: %v", err)
 	}
 
-	block, _ := pem.Decode([]byte(certPEM))
-	x509Cert, err := x509.ParseCertificate(block.Bytes)
+	tlsCert, err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
 	if err != nil {
-		t.Fatalf("ParseCertificate: %v", err)
-	}
-	keyBlock, _ := pem.Decode([]byte(keyPEM))
-	privKey, err := x509.ParseECPrivateKey(keyBlock.Bytes)
-	if err != nil {
-		t.Fatalf("ParseECPrivateKey: %v", err)
-	}
-	tlsCert := tls.Certificate{
-		Certificate: [][]byte{x509Cert.Raw},
-		PrivateKey:  privKey,
+		t.Fatalf("X509KeyPair: %v", err)
 	}
 
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	server.TLS = &tls.Config{Certificates: []tls.Certificate{tlsCert}}
+	server.Config.ErrorLog = log.New(io.Discard, "", 0)
 	server.StartTLS()
 	defer server.Close()
 
