@@ -17,8 +17,11 @@ type DeployInput struct {
 	Runtime      models.Runtime
 	ModelTag     string
 	InstanceType string
-	UserIP       string
-	APIKey       string
+	UserIP         string
+	APIKey         string
+	TLSCert        string
+	TLSKey         string
+	TLSFingerprint string
 }
 
 type DeployResult struct {
@@ -38,7 +41,9 @@ type Deployment struct {
 	InstanceID   string    `json:"instance_id"`
 	PublicIP     string    `json:"public_ip"`
 	Endpoint     string    `json:"endpoint"`
-	APIKey       string    `json:"api_key"`
+	APIKey         string `json:"api_key"`
+	TLSCert        string `json:"tls_cert"`
+	TLSFingerprint string `json:"tls_fingerprint"`
 }
 
 type Provider interface {
