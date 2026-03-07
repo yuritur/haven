@@ -46,6 +46,6 @@ func runCert(ctx context.Context, providerName, id string, showFingerprint bool)
 		return fmt.Errorf("deployment %s has no TLS certificate", id)
 	}
 
-	fmt.Print(d.TLSCert)
+	fmt.Print(d.TLSCert) // PEM already ends with a newline
 	return nil
 }
