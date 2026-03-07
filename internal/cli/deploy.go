@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -195,11 +196,20 @@ func waitForOllama(ctx context.Context, endpoint, model, apiKey string) error {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 
 		resp, err := client.Do(req)
-		if err == nil {
+		if err == nil && resp.StatusCode == 200 {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			if resp.StatusCode == 200 && strings.Contains(string(body), model) {
-				return nil
+			var tagsResp struct {
+				Models []struct {
+					Name string `json:"name"`
+				} `json:"models"`
+			}
+			if json.Unmarshal(body, &tagsResp) == nil {
+				for _, m := range tagsResp.Models {
+					if m.Name == model {
+						return nil
+					}
+				}
 			}
 		}
 		select {
