@@ -24,6 +24,7 @@ mkdir -p /etc/systemd/system/ollama.service.d
 cat > /etc/systemd/system/ollama.service.d/override.conf << 'CONF'
 [Service]
 Environment="OLLAMA_HOST=127.0.0.1:11435"
+Environment="OLLAMA_ORIGINS=*"
 CONF
 
 systemctl daemon-reload
@@ -32,6 +33,8 @@ systemctl restart ollama
 
 echo "Installing nginx..."
 dnf install -y nginx
+chown root:nginx /etc/haven/server.key
+chmod 640 /etc/haven/server.key
 
 cat > /etc/nginx/conf.d/haven.conf << 'NGINX'
 server {
@@ -42,7 +45,7 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
     location / {
         proxy_pass http://127.0.0.1:11435;
-        proxy_set_header Host $host;
+        proxy_set_header Host localhost;
         proxy_read_timeout 600s;
         proxy_buffering off;
     }
@@ -67,6 +70,7 @@ echo "Enabling API key auth..."
 cat > /etc/systemd/system/ollama.service.d/override.conf << 'CONF'
 [Service]
 Environment="OLLAMA_HOST=127.0.0.1:11435"
+Environment="OLLAMA_ORIGINS=*"
 Environment="OLLAMA_API_KEY={{HAVEN_API_KEY}}"
 CONF
 

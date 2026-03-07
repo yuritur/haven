@@ -146,7 +146,7 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 		spin = tui.StartSpinner("Waiting for model to be ready...")
 	}
 
-	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey, tlsFingerprint); err != nil {
+	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out); err != nil {
 		if spin != nil {
 			spin.Stop()
 		}
@@ -162,14 +162,22 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 		spin.Stop()
 	}
 
+	certDir := "data/certs"
+	if err := os.MkdirAll(certDir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not create %s: %v\n", certDir, err)
+	}
+	certFile := certDir + "/" + deploymentID + ".pem"
+	if err := os.WriteFile(certFile, []byte(tlsCert), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: could not save %s: %v\n", certFile, err)
+	}
+
 	fmt.Printf("\nDeployment ready!\n")
 	fmt.Printf("  Endpoint : %s\n", deployment.Endpoint)
 	fmt.Printf("  API Key  : %s\n", deployment.APIKey)
-	fmt.Printf("  TLS Cert : haven cert %s\n", deployment.ID)
+	fmt.Printf("  TLS Cert : %s\n", certFile)
 	fmt.Printf("  ID       : %s\n\n", deployment.ID)
 	fmt.Printf("Test:\n")
-	fmt.Printf("  haven cert %s > cert.pem\n", deployment.ID)
-	fmt.Printf("  curl --cacert cert.pem %s/chat/completions \\\n", deployment.Endpoint)
+	fmt.Printf("  curl -k --cacert %s %s/chat/completions \\\n", certFile, deployment.Endpoint)
 	fmt.Printf("    -H 'Authorization: Bearer %s' \\\n", deployment.APIKey)
 	fmt.Printf("    -H 'Content-Type: application/json' \\\n")
 	fmt.Printf("    -d '{\"model\":\"%s\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}'\n", modelName)
@@ -190,7 +198,7 @@ func detectPublicIP() (string, error) {
 	return strings.TrimSpace(string(body)), nil
 }
 
-func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint string) error {
+func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint string, verbose io.Writer) error {
 	client := &http.Client{
 		Timeout:   10 * time.Second,
 		Transport: certutil.NewPinnedTransport(fingerprint),
@@ -211,7 +219,12 @@ func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint str
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 
 		resp, err := client.Do(req)
-		if err == nil && resp.StatusCode == 200 {
+		if err != nil {
+			fmt.Fprintf(verbose, "poll: %v\n", err)
+		} else if resp.StatusCode != 200 {
+			resp.Body.Close()
+			fmt.Fprintf(verbose, "poll: status %d\n", resp.StatusCode)
+		} else {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			var tagsResp struct {
@@ -226,6 +239,7 @@ func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint str
 					}
 				}
 			}
+			fmt.Fprintf(verbose, "poll: model not yet in /api/tags\n")
 		}
 		select {
 		case <-ctx.Done():
