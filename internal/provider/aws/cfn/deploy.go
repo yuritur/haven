@@ -114,7 +114,7 @@ func pollStackEvents(
 		})
 		if err != nil {
 			var apiErr smithy.APIError
-			if errors.As(err, &apiErr) && strings.Contains(apiErr.ErrorMessage(), "does not exist") {
+			if errors.As(err, &apiErr) && apiErr.ErrorCode() == "ValidationError" && strings.Contains(apiErr.ErrorMessage(), "does not exist") {
 				done, failed := isTerminal(cfntypes.StackStatusDeleteComplete)
 				if done && !failed {
 					return nil
@@ -148,7 +148,7 @@ func pollStackEvents(
 		})
 		if err != nil {
 			var apiErr smithy.APIError
-			if errors.As(err, &apiErr) && strings.Contains(apiErr.ErrorMessage(), "does not exist") {
+			if errors.As(err, &apiErr) && apiErr.ErrorCode() == "ValidationError" && strings.Contains(apiErr.ErrorMessage(), "does not exist") {
 				done, failed := isTerminal(cfntypes.StackStatusDeleteComplete)
 				if done && !failed {
 					return nil
