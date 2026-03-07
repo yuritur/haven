@@ -2,6 +2,12 @@
 set -e
 exec > /var/log/haven-bootstrap.log 2>&1
 
+echo "Writing TLS certificate..."
+mkdir -p /etc/haven
+echo '{{HAVEN_TLS_CERT_B64}}' | base64 -d > /etc/haven/server.crt
+echo '{{HAVEN_TLS_KEY_B64}}' | base64 -d > /etc/haven/server.key
+chmod 600 /etc/haven/server.key
+
 echo "Installing Ollama..."
 for i in $(seq 1 5); do
     curl -fsSL https://ollama.com/install.sh | sh && break
@@ -17,28 +23,50 @@ echo "Configuring Ollama..."
 mkdir -p /etc/systemd/system/ollama.service.d
 cat > /etc/systemd/system/ollama.service.d/override.conf << 'CONF'
 [Service]
-Environment="OLLAMA_HOST=0.0.0.0:11434"
+Environment="OLLAMA_HOST=127.0.0.1:11435"
 CONF
 
 systemctl daemon-reload
 systemctl enable ollama
 systemctl restart ollama
 
+echo "Installing nginx..."
+dnf install -y nginx
+
+cat > /etc/nginx/conf.d/haven.conf << 'NGINX'
+server {
+    listen 11434 ssl;
+    ssl_certificate /etc/haven/server.crt;
+    ssl_certificate_key /etc/haven/server.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    location / {
+        proxy_pass http://127.0.0.1:11435;
+        proxy_set_header Host $host;
+        proxy_read_timeout 600s;
+        proxy_buffering off;
+    }
+}
+NGINX
+
+systemctl enable nginx
+systemctl start nginx
+
 echo "Waiting for Ollama to start..."
 for i in $(seq 1 30); do
-    curl -sf http://localhost:11434/ > /dev/null 2>&1 && break
+    curl -sf http://127.0.0.1:11435/ > /dev/null 2>&1 && break
     sleep 2
 done
 
 echo "Pulling model {{HAVEN_MODEL}}..."
-curl -sf -X POST http://localhost:11434/api/pull \
+curl -sf -X POST http://127.0.0.1:11435/api/pull \
     -H 'Content-Type: application/json' \
     -d '{"name":"{{HAVEN_MODEL}}","stream":false}'
 
 echo "Enabling API key auth..."
 cat > /etc/systemd/system/ollama.service.d/override.conf << 'CONF'
 [Service]
-Environment="OLLAMA_HOST=0.0.0.0:11434"
+Environment="OLLAMA_HOST=127.0.0.1:11435"
 Environment="OLLAMA_API_KEY={{HAVEN_API_KEY}}"
 CONF
 
