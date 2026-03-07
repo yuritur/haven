@@ -169,9 +169,9 @@ func pollStackEvents(
 		}
 
 		select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(5 * time.Second):
-	}
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(5 * time.Second):
+		}
 	}
 }
