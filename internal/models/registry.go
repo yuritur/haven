@@ -1,6 +1,10 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 type Runtime string
 
@@ -9,7 +13,6 @@ const (
 )
 
 type Config struct {
-	Name         string
 	Runtime      Runtime
 	Tag          string // runtime-specific model identifier
 	InstanceType string
@@ -18,21 +21,18 @@ type Config struct {
 
 var registry = map[string]Config{
 	"llama3.2:1b": {
-		Name:         "llama3.2:1b",
 		Runtime:      RuntimeOllama,
 		Tag:          "llama3.2:1b",
 		InstanceType: "t3.large",
 		MinRAMGB:     8,
 	},
 	"llama3.2:3b": {
-		Name:         "llama3.2:3b",
 		Runtime:      RuntimeOllama,
 		Tag:          "llama3.2:3b",
 		InstanceType: "t3.xlarge",
 		MinRAMGB:     16,
 	},
 	"phi3:mini": {
-		Name:         "phi3:mini",
 		Runtime:      RuntimeOllama,
 		Tag:          "phi3:mini",
 		InstanceType: "t3.large",
@@ -43,7 +43,12 @@ var registry = map[string]Config{
 func Lookup(name string) (Config, error) {
 	cfg, ok := registry[name]
 	if !ok {
-		return Config{}, fmt.Errorf("unknown model %q — available: llama3.2:1b, llama3.2:3b, phi3:mini", name)
+		names := make([]string, 0, len(registry))
+		for k := range registry {
+			names = append(names, k)
+		}
+		sort.Strings(names)
+		return Config{}, fmt.Errorf("unknown model %q — available: %s", name, strings.Join(names, ", "))
 	}
 	return cfg, nil
 }
