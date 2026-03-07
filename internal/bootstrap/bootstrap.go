@@ -15,6 +15,9 @@ var ollamaScript string
 func Generate(runtime models.Runtime, tag, apiKey, tlsCert, tlsKey string) (string, error) {
 	switch runtime {
 	case models.RuntimeOllama:
+		if tlsCert == "" || tlsKey == "" {
+			return "", fmt.Errorf("TLS cert and key are required")
+		}
 		certB64 := base64.StdEncoding.EncodeToString([]byte(tlsCert))
 		keyB64 := base64.StdEncoding.EncodeToString([]byte(tlsKey))
 		r := strings.NewReplacer(

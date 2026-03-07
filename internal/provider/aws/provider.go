@@ -56,6 +56,8 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 		InstanceType: input.InstanceType,
 		UserIP:       input.UserIP,
 		APIKey:       input.APIKey,
+		TLSCert:      input.TLSCert,
+		TLSKey:       input.TLSKey,
 		Out:          p.out,
 	})
 	if err != nil {
