@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/havenapp/haven/internal/certutil"
 	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/tui"
@@ -89,13 +90,21 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 		spin = tui.StartSpinner("Provisioning infrastructure...")
 	}
 
+	tlsCert, tlsKey, tlsFingerprint, err := certutil.GenerateSelfSigned()
+	if err != nil {
+		return fmt.Errorf("generate TLS cert: %w", err)
+	}
+
 	result, err := prov.Deploy(sigCtx, provider.DeployInput{
-		DeploymentID: deploymentID,
-		Runtime:      modelCfg.Runtime,
-		ModelTag:     modelCfg.Tag,
-		InstanceType: modelCfg.InstanceType,
-		UserIP:       userIP + "/32",
-		APIKey:       apiKey,
+		DeploymentID:   deploymentID,
+		Runtime:        modelCfg.Runtime,
+		ModelTag:       modelCfg.Tag,
+		InstanceType:   modelCfg.InstanceType,
+		UserIP:         userIP + "/32",
+		APIKey:         apiKey,
+		TLSCert:        tlsCert,
+		TLSKey:         tlsKey,
+		TLSFingerprint: tlsFingerprint,
 	})
 
 	if spin != nil {
@@ -109,7 +118,7 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 		return fmt.Errorf("deploy: %w", err)
 	}
 
-	endpoint := fmt.Sprintf("http://%s:11434", result.PublicIP)
+	endpoint := fmt.Sprintf("https://%s:11434", result.PublicIP)
 
 	deployment := provider.Deployment{
 		ID:           deploymentID,
@@ -120,9 +129,11 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 		Model:        modelName,
 		InstanceType: modelCfg.InstanceType,
 		InstanceID:   result.InstanceID,
-		PublicIP:     result.PublicIP,
-		Endpoint:     endpoint + "/v1",
-		APIKey:       apiKey,
+		PublicIP:       result.PublicIP,
+		Endpoint:       endpoint + "/v1",
+		APIKey:         apiKey,
+		TLSCert:        tlsCert,
+		TLSFingerprint: tlsFingerprint,
 	}
 
 	if err := store.Save(ctx, deployment); err != nil {
@@ -135,7 +146,7 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 		spin = tui.StartSpinner("Waiting for model to be ready...")
 	}
 
-	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey); err != nil {
+	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey, tlsFingerprint); err != nil {
 		if spin != nil {
 			spin.Stop()
 		}
@@ -154,6 +165,7 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 	fmt.Printf("\nDeployment ready!\n")
 	fmt.Printf("  Endpoint : %s\n", deployment.Endpoint)
 	fmt.Printf("  API Key  : %s\n", deployment.APIKey)
+	fmt.Printf("  TLS Cert : haven cert %s\n", deployment.ID)
 	fmt.Printf("  ID       : %s\n\n", deployment.ID)
 	fmt.Printf("Test:\n")
 	fmt.Printf("  curl %s/chat/completions \\\n", deployment.Endpoint)
@@ -177,8 +189,11 @@ func detectPublicIP() (string, error) {
 	return strings.TrimSpace(string(body)), nil
 }
 
-func waitForOllama(ctx context.Context, endpoint, model, apiKey string) error {
-	client := &http.Client{Timeout: 10 * time.Second}
+func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint string) error {
+	client := &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: certutil.NewPinnedTransport(fingerprint),
+	}
 	deadline := time.Now().Add(15 * time.Minute)
 
 	for time.Now().Before(deadline) {
