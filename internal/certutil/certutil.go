@@ -34,8 +34,8 @@ func GenerateSelfSigned() (certPEM, keyPEM, fingerprint string, err error) {
 		SerialNumber: serial,
 		Subject:      pkix.Name{CommonName: "haven"},
 		NotBefore:    now,
-		NotAfter:     now.Add(10 * 365 * 24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		NotAfter:     now.AddDate(10, 0, 0),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 
@@ -65,6 +65,7 @@ func NewPinnedTransport(fingerprint string) *http.Transport {
 	return &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true, //nolint:gosec // fingerprint pinning replaces CA verification
+			MinVersion:         tls.VersionTLS12,
 			VerifyConnection: func(cs tls.ConnectionState) error {
 				for _, cert := range cs.PeerCertificates {
 					sum := sha256.Sum256(cert.Raw)
