@@ -142,10 +142,9 @@ func runDeploy(ctx context.Context, providerName, modelName string, verbose bool
 		if sigCtx.Err() != nil {
 			cleanup(result.ProviderRef)
 			_ = store.Delete(context.Background(), deploymentID)
-		} else {
-			return fmt.Errorf("waiting for Ollama: %w\nDeployment %s is saved — run `haven destroy %s` to clean up", err, deploymentID, deploymentID)
+			return nil
 		}
-		return fmt.Errorf("waiting for Ollama: %w", err)
+		return fmt.Errorf("waiting for Ollama: %w\nDeployment %s is saved — run `haven destroy %s` to clean up", err, deploymentID, deploymentID)
 	}
 
 	if spin != nil {
