@@ -10,8 +10,9 @@ import (
 
 func newCertCmd(providerName *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "cert <id>",
+		Use:   "cert <deployment-id>",
 		Short: "Print the TLS certificate for a deployment",
+		Long:  "Print the TLS certificate for a deployment in PEM format.\n\nUsage with OpenAI SDK:\n  haven cert <id> > cert.pem\n  SSL_CERT_FILE=cert.pem python your_script.py",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCert(cmd.Context(), *providerName, args[0])
