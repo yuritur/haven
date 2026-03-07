@@ -17,27 +17,33 @@ import (
 
 	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
+	"github.com/havenapp/haven/internal/tui"
 )
 
-func newDeployCmd(providerName *string) *cobra.Command {
+func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 	return &cobra.Command{
 		Use:     "deploy <model>",
 		Short:   "Deploy a model to your cloud",
 		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --provider aws",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDeploy(cmd.Context(), *providerName, args[0])
+			return runDeploy(cmd.Context(), *providerName, args[0], *verbose)
 		},
 	}
 }
 
-func runDeploy(ctx context.Context, providerName, modelName string) error {
+func runDeploy(ctx context.Context, providerName, modelName string, verbose bool) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
 	}
 
-	prov, store, err := buildProviderAndStore(ctx, providerName)
+	var out io.Writer = io.Discard
+	if verbose {
+		out = os.Stdout
+	}
+
+	prov, store, err := buildProviderAndStore(ctx, providerName, out)
 	if err != nil {
 		return err
 	}
@@ -77,6 +83,11 @@ func runDeploy(ctx context.Context, providerName, modelName string) error {
 		}
 	}
 
+	var spin *tui.Spinner
+	if !verbose {
+		spin = tui.StartSpinner("Provisioning infrastructure...")
+	}
+
 	result, err := prov.Deploy(sigCtx, provider.DeployInput{
 		DeploymentID: deploymentID,
 		Runtime:      modelCfg.Runtime,
@@ -85,6 +96,11 @@ func runDeploy(ctx context.Context, providerName, modelName string) error {
 		UserIP:       userIP + "/32",
 		APIKey:       apiKey,
 	})
+
+	if spin != nil {
+		spin.Stop()
+	}
+
 	if err != nil {
 		if sigCtx.Err() != nil {
 			cleanup(deploymentID)
@@ -93,14 +109,6 @@ func runDeploy(ctx context.Context, providerName, modelName string) error {
 	}
 
 	endpoint := fmt.Sprintf("http://%s:11434", result.PublicIP)
-	fmt.Printf("\nInstance up at %s. Waiting for Ollama + model pull...\n", result.PublicIP)
-
-	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey); err != nil {
-		if sigCtx.Err() != nil {
-			cleanup(result.ProviderRef)
-		}
-		return fmt.Errorf("waiting for Ollama: %w", err)
-	}
 
 	deployment := provider.Deployment{
 		ID:           deploymentID,
@@ -120,6 +128,29 @@ func runDeploy(ctx context.Context, providerName, modelName string) error {
 		return fmt.Errorf("save state: %w", err)
 	}
 
+	fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)
+
+	if !verbose {
+		spin = tui.StartSpinner("Waiting for model to be ready...")
+	}
+
+	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey); err != nil {
+		if spin != nil {
+			spin.Stop()
+		}
+		if sigCtx.Err() != nil {
+			cleanup(result.ProviderRef)
+			_ = store.Delete(context.Background(), deploymentID)
+		} else {
+			return fmt.Errorf("waiting for Ollama: %w\nDeployment %s is saved — run `haven destroy %s` to clean up", err, deploymentID, deploymentID)
+		}
+		return fmt.Errorf("waiting for Ollama: %w", err)
+	}
+
+	if spin != nil {
+		spin.Stop()
+	}
+
 	fmt.Printf("\nDeployment ready!\n")
 	fmt.Printf("  Endpoint : %s\n", deployment.Endpoint)
 	fmt.Printf("  API Key  : %s\n", deployment.APIKey)
@@ -133,7 +164,8 @@ func runDeploy(ctx context.Context, providerName, modelName string) error {
 }
 
 func detectPublicIP() (string, error) {
-	resp, err := http.Get("https://checkip.amazonaws.com/")
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get("https://checkip.amazonaws.com/")
 	if err != nil {
 		return "", err
 	}
@@ -148,7 +180,6 @@ func detectPublicIP() (string, error) {
 func waitForOllama(ctx context.Context, endpoint, model, apiKey string) error {
 	client := &http.Client{Timeout: 10 * time.Second}
 	deadline := time.Now().Add(15 * time.Minute)
-	modelBase := strings.SplitN(model, ":", 2)[0]
 
 	for time.Now().Before(deadline) {
 		select {
@@ -167,13 +198,15 @@ func waitForOllama(ctx context.Context, endpoint, model, apiKey string) error {
 		if err == nil {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			if resp.StatusCode == 200 && strings.Contains(string(body), modelBase) {
-				fmt.Println(" ready!")
+			if resp.StatusCode == 200 && strings.Contains(string(body), model) {
 				return nil
 			}
 		}
-		fmt.Print(".")
-		time.Sleep(10 * time.Second)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(10 * time.Second):
+		}
 	}
 	return fmt.Errorf("timed out after 15 minutes")
 }
