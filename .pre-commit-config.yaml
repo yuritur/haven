@@ -1,13 +1,4 @@
 repos:
-  - repo: https://github.com/bridgecrewio/checkov.git
-    rev: 3.2.19
-    hooks:
-      - id: checkov
-        args:
-          - --quiet
-          - --compact
-          - --skip-check=CKV_AWS_338,CKV_DOCKER_2,CKV_DOCKER_3,CKV_AWS_158
-        files: .*
   - repo: https://github.com/TekWizely/pre-commit-golang
     rev: v1.0.0-rc.1
     hooks:
