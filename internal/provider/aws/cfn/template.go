@@ -14,10 +14,12 @@ type TemplateInput struct {
 	Runtime      models.Runtime
 	ModelTag     string
 	InstanceType string
+	TLSCert      string
+	TLSKey       string
 }
 
 func GenerateTemplate(input TemplateInput) (string, error) {
-	userData, err := bootstrap.Generate(input.Runtime, input.ModelTag, input.APIKey)
+	userData, err := bootstrap.Generate(input.Runtime, input.ModelTag, input.APIKey, input.TLSCert, input.TLSKey)
 	if err != nil {
 		return "", fmt.Errorf("bootstrap script: %w", err)
 	}
