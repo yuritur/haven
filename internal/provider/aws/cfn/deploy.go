@@ -2,6 +2,7 @@ package cfn
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	cfntypes "github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
+	"github.com/aws/smithy-go"
 
 	"github.com/havenapp/haven/internal/models"
 )
@@ -111,7 +113,8 @@ func pollStackEvents(
 			StackName: aws.String(stackName),
 		})
 		if err != nil {
-			if strings.Contains(err.Error(), "does not exist") {
+			var apiErr smithy.APIError
+			if errors.As(err, &apiErr) && strings.Contains(apiErr.ErrorMessage(), "does not exist") {
 				done, failed := isTerminal(cfntypes.StackStatusDeleteComplete)
 				if done && !failed {
 					return nil
@@ -144,7 +147,8 @@ func pollStackEvents(
 			StackName: aws.String(stackName),
 		})
 		if err != nil {
-			if strings.Contains(err.Error(), "does not exist") {
+			var apiErr smithy.APIError
+			if errors.As(err, &apiErr) && strings.Contains(apiErr.ErrorMessage(), "does not exist") {
 				done, failed := isTerminal(cfntypes.StackStatusDeleteComplete)
 				if done && !failed {
 					return nil
