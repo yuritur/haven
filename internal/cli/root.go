@@ -28,6 +28,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newDeployCmd(&providerName, &verbose))
 	root.AddCommand(newDestroyCmd(&providerName, &verbose))
 	root.AddCommand(newStatusCmd(&providerName))
+	root.AddCommand(newCertCmd(&providerName))
 
 	return root
 }
