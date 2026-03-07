@@ -3,6 +3,8 @@ package cfn
 import (
 	"context"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -19,6 +21,7 @@ type DeployInput struct {
 	InstanceType string
 	UserIP       string
 	APIKey       string
+	Out          io.Writer
 }
 
 type DeployResult struct {
@@ -50,7 +53,7 @@ func Deploy(ctx context.Context, cfg aws.Config, input DeployInput) (DeployResul
 		return DeployResult{}, fmt.Errorf("create stack %s: %w", input.StackName, err)
 	}
 
-	if err := pollStackEvents(ctx, cfnClient, input.StackName, isDeployTerminal); err != nil {
+	if err := pollStackEvents(ctx, cfnClient, input.StackName, input.Out, isDeployTerminal); err != nil {
 		return DeployResult{}, err
 	}
 
@@ -98,6 +101,7 @@ func pollStackEvents(
 	ctx context.Context,
 	cfnClient *cloudformation.Client,
 	stackName string,
+	out io.Writer,
 	isTerminal func(cfntypes.StackStatus) (done bool, failed bool),
 ) error {
 	seenEventIDs := map[string]bool{}
@@ -107,6 +111,12 @@ func pollStackEvents(
 			StackName: aws.String(stackName),
 		})
 		if err != nil {
+			if strings.Contains(err.Error(), "does not exist") {
+				done, failed := isTerminal(cfntypes.StackStatusDeleteComplete)
+				if done && !failed {
+					return nil
+				}
+			}
 			return fmt.Errorf("describe stack events for %s: %w", stackName, err)
 		}
 
@@ -123,7 +133,7 @@ func pollStackEvents(
 			if e.Timestamp != nil {
 				ts = e.Timestamp.Format(time.RFC3339)
 			}
-			fmt.Printf("  [%s] %s %s\n",
+			fmt.Fprintf(out, "  [%s] %s %s\n",
 				ts,
 				aws.ToString(e.ResourceType),
 				string(e.ResourceStatus),
@@ -134,9 +144,11 @@ func pollStackEvents(
 			StackName: aws.String(stackName),
 		})
 		if err != nil {
-			done, failed := isTerminal(cfntypes.StackStatusDeleteComplete)
-			if done && !failed {
-				return nil
+			if strings.Contains(err.Error(), "does not exist") {
+				done, failed := isTerminal(cfntypes.StackStatusDeleteComplete)
+				if done && !failed {
+					return nil
+				}
 			}
 			return fmt.Errorf("describe stack %s: %w", stackName, err)
 		}
@@ -156,6 +168,10 @@ func pollStackEvents(
 			return nil
 		}
 
-		time.Sleep(5 * time.Second)
+		select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(5 * time.Second):
+	}
 	}
 }
