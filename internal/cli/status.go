@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,7 @@ func newStatusCmd(providerName *string) *cobra.Command {
 }
 
 func runStatus(ctx context.Context, providerName string) error {
-	_, store, err := buildProviderAndStore(ctx, providerName)
+	_, store, err := buildProviderAndStore(ctx, providerName, io.Discard)
 	if err != nil {
 		return err
 	}

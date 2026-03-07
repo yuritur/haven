@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -13,6 +14,7 @@ import (
 
 func NewRootCmd() *cobra.Command {
 	var providerName string
+	var verbose bool
 
 	root := &cobra.Command{
 		Use:   "haven",
@@ -21,9 +23,10 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	root.PersistentFlags().StringVar(&providerName, "provider", "aws", "Cloud provider to use (aws)")
+	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show detailed provider resource events")
 
-	root.AddCommand(newDeployCmd(&providerName))
-	root.AddCommand(newDestroyCmd(&providerName))
+	root.AddCommand(newDeployCmd(&providerName, &verbose))
+	root.AddCommand(newDestroyCmd(&providerName, &verbose))
 	root.AddCommand(newStatusCmd(&providerName))
 
 	return root
@@ -35,10 +38,10 @@ func Execute() {
 	}
 }
 
-func buildProviderAndStore(ctx context.Context, name string) (provider.Provider, provider.StateStore, error) {
+func buildProviderAndStore(ctx context.Context, name string, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	switch name {
 	case "aws":
-		return awsprovider.New(ctx)
+		return awsprovider.New(ctx, out)
 	default:
 		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
 	}

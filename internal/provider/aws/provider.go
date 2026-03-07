@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"io"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 
@@ -12,11 +13,12 @@ import (
 type AWSProvider struct {
 	cfg      awssdk.Config
 	identity provider.Identity
+	out      io.Writer
 }
 
 var _ provider.Provider = (*AWSProvider)(nil)
 
-func New(ctx context.Context) (provider.Provider, provider.StateStore, error) {
+func New(ctx context.Context, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	cfg, err := loadConfig(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -34,6 +36,7 @@ func New(ctx context.Context) (provider.Provider, provider.StateStore, error) {
 
 	return &AWSProvider{
 		cfg: cfg,
+		out: out,
 		identity: provider.Identity{
 			AccountID: id.AccountID,
 			Region:    id.Region,
@@ -53,6 +56,7 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 		InstanceType: input.InstanceType,
 		UserIP:       input.UserIP,
 		APIKey:       input.APIKey,
+		Out:          p.out,
 	})
 	if err != nil {
 		return provider.DeployResult{}, err
@@ -65,5 +69,5 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 }
 
 func (p *AWSProvider) Destroy(ctx context.Context, providerRef string) error {
-	return cfn.Destroy(ctx, p.cfg, providerRef)
+	return cfn.Destroy(ctx, p.cfg, providerRef, p.out)
 }

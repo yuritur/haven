@@ -6,6 +6,10 @@ echo "Installing Ollama..."
 for i in $(seq 1 5); do
     curl -fsSL https://ollama.com/install.sh | sh && break
     echo "Install attempt $i failed, retrying in 10s..."
+    if [ "$i" -eq 5 ]; then
+        echo "ERROR: Ollama installation failed after 5 attempts, aborting."
+        exit 1
+    fi
     sleep 10
 done
 
