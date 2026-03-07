@@ -67,13 +67,14 @@ func NewPinnedTransport(fingerprint string) *http.Transport {
 			InsecureSkipVerify: true, //nolint:gosec // fingerprint pinning replaces CA verification
 			MinVersion:         tls.VersionTLS12,
 			VerifyConnection: func(cs tls.ConnectionState) error {
-				for _, cert := range cs.PeerCertificates {
-					sum := sha256.Sum256(cert.Raw)
-					if hex.EncodeToString(sum[:]) == fingerprint {
-						return nil
-					}
+				if len(cs.PeerCertificates) == 0 {
+					return fmt.Errorf("certutil: no peer certificates presented")
 				}
-				return fmt.Errorf("certutil: no presented certificate matches pinned fingerprint %s", fingerprint)
+				fp := sha256.Sum256(cs.PeerCertificates[0].Raw)
+				if hex.EncodeToString(fp[:]) != fingerprint {
+					return fmt.Errorf("certutil: cert fingerprint mismatch")
+				}
+				return nil
 			},
 		},
 	}
