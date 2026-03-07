@@ -57,6 +57,7 @@ func TestGenerate_ContainsSubstitutions(t *testing.T) {
 }
 
 func TestGenerate_UnsupportedRuntime(t *testing.T) {
+	// TLS values are non-empty so the TLS guard does not fire before the runtime check.
 	_, err := bootstrap.Generate("vllm", "llama3.2:1b", "sk-test", "cert", "key")
 	if err == nil {
 		t.Fatal("expected error for unsupported runtime, got nil")
