@@ -8,11 +8,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	cfntypes "github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
+
+	"github.com/havenapp/haven/internal/models"
 )
 
 type DeployInput struct {
 	StackName    string
-	Model        string
+	Runtime      models.Runtime
+	ModelTag     string
 	InstanceType string
 	UserIP       string
 	APIKey       string
@@ -28,7 +31,8 @@ func Deploy(ctx context.Context, cfg aws.Config, input DeployInput) (DeployResul
 	templateJSON, err := GenerateTemplate(TemplateInput{
 		UserIP:       input.UserIP,
 		APIKey:       input.APIKey,
-		Model:        input.Model,
+		Runtime:      input.Runtime,
+		ModelTag:     input.ModelTag,
 		InstanceType: input.InstanceType,
 	})
 	if err != nil {

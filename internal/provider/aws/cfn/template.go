@@ -2,49 +2,25 @@ package cfn
 
 import (
 	"encoding/json"
-	"strings"
+	"fmt"
+
+	"github.com/havenapp/haven/internal/bootstrap"
+	"github.com/havenapp/haven/internal/models"
 )
 
 type TemplateInput struct {
 	UserIP       string
 	APIKey       string
-	Model        string
+	Runtime      models.Runtime
+	ModelTag     string
 	InstanceType string
 }
 
-const userDataTemplate = `#!/bin/bash
-set -e
-exec > /var/log/haven-bootstrap.log 2>&1
-
-echo "Installing Ollama..."
-curl -fsSL https://ollama.com/install.sh | sh
-
-echo "Configuring Ollama..."
-mkdir -p /etc/systemd/system/ollama.service.d
-cat > /etc/systemd/system/ollama.service.d/override.conf << 'CONF'
-[Service]
-Environment="OLLAMA_HOST=0.0.0.0:11434"
-Environment="OLLAMA_API_KEY=HAVEN_API_KEY"
-CONF
-
-systemctl daemon-reload
-systemctl enable ollama
-systemctl start ollama
-
-echo "Waiting for Ollama to start..."
-for i in $(seq 1 30); do
-    curl -sf http://localhost:11434/api/tags > /dev/null 2>&1 && break
-    sleep 2
-done
-
-echo "Pulling model HAVEN_MODEL..."
-ollama pull HAVEN_MODEL
-echo "Bootstrap complete."
-`
-
 func GenerateTemplate(input TemplateInput) (string, error) {
-	userData := strings.ReplaceAll(userDataTemplate, "HAVEN_API_KEY", input.APIKey)
-	userData = strings.ReplaceAll(userData, "HAVEN_MODEL", input.Model)
+	userData, err := bootstrap.Generate(input.Runtime, input.ModelTag, input.APIKey)
+	if err != nil {
+		return "", fmt.Errorf("bootstrap script: %w", err)
+	}
 
 	template := map[string]interface{}{
 		"AWSTemplateFormatVersion": "2010-09-09",
@@ -70,6 +46,7 @@ func GenerateTemplate(input TemplateInput) (string, error) {
 					"VpcId":               map[string]interface{}{"Ref": "HavenVPC"},
 					"CidrBlock":           "10.0.1.0/24",
 					"MapPublicIpOnLaunch": true,
+					"AvailabilityZone":    map[string]interface{}{"Fn::Select": []interface{}{0, map[string]interface{}{"Fn::GetAZs": ""}}},
 				},
 			},
 			"HavenIGW": map[string]interface{}{

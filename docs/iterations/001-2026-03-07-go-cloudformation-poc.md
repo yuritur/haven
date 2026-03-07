@@ -90,3 +90,40 @@ Not yet tested against real AWS. Next step: run `haven deploy llama3.2:1b` again
 - Verify Ollama health check and model pull detection
 - Verify `haven destroy` cleans up all resources
 - Add `--region` flag to deploy command
+
+## Status update (multi-provider refactor)
+
+### Done
+
+- Introduced provider abstraction in `internal/provider/provider.go`:
+  - `Provider` interface (`Identity`, `Deploy`, `Destroy`)
+  - `StateStore` interface (`Save`, `Load`, `List`, `Delete`)
+  - shared deployment/identity types
+- Moved AWS implementation under `internal/provider/aws/`:
+  - credentials/bootstrap
+  - CloudFormation deploy/destroy/template in `internal/provider/aws/cfn/`
+  - S3-backed state store in `internal/provider/aws/state.go`
+  - AWS provider entrypoint in `internal/provider/aws/provider.go`
+- Rewrote CLI to be provider-oriented:
+  - `internal/cli/root.go` now uses constructor pattern and `--provider` flag
+  - `internal/cli/{deploy,destroy,status}.go` now work through provider interfaces
+  - status output now includes `CLOUD` column
+- Updated entrypoint in `cmd/haven/main.go` to execute `cli.NewRootCmd()`
+- Removed old packages: `internal/aws`, `internal/cfn`, `internal/state`
+- Verification completed:
+  - `go build ./...` passes
+  - CLI help confirms provider-agnostic top-level text and visible `--provider` flag
+  - `go mod tidy` completed
+
+### Ready
+
+- Tasks 1-14 from `docs/plans/2026-03-07-multi-provider-impl.md` are implemented and integrated on `master`.
+- Merge hardening fixes are in place:
+  - crypto-random generation errors are now handled in deploy ID/API key generation
+  - state listing no longer silently drops load errors
+
+### Remaining
+
+- Add automated tests for provider wiring and CLI flows (`deploy`, `destroy`, `status` with provider abstraction)
+- Run real AWS end-to-end validation after refactor (`deploy -> status -> destroy`)
+- Optionally remove unused `Execute()` helper in `internal/cli/root.go` if we keep `main.go` as the single entry path

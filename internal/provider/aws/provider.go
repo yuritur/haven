@@ -48,7 +48,8 @@ func (p *AWSProvider) Identity(_ context.Context) (provider.Identity, error) {
 func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error) {
 	result, err := cfn.Deploy(ctx, p.cfg, cfn.DeployInput{
 		StackName:    input.DeploymentID,
-		Model:        input.Model,
+		Runtime:      input.Runtime,
+		ModelTag:     input.ModelTag,
 		InstanceType: input.InstanceType,
 		UserIP:       input.UserIP,
 		APIKey:       input.APIKey,

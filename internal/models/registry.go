@@ -2,9 +2,16 @@ package models
 
 import "fmt"
 
+type Runtime string
+
+const (
+	RuntimeOllama Runtime = "ollama"
+)
+
 type Config struct {
 	Name         string
-	OllamaTag    string
+	Runtime      Runtime
+	Tag          string // runtime-specific model identifier
 	InstanceType string
 	MinRAMGB     int
 }
@@ -12,19 +19,22 @@ type Config struct {
 var registry = map[string]Config{
 	"llama3.2:1b": {
 		Name:         "llama3.2:1b",
-		OllamaTag:    "llama3.2:1b",
+		Runtime:      RuntimeOllama,
+		Tag:          "llama3.2:1b",
 		InstanceType: "t3.large",
 		MinRAMGB:     8,
 	},
 	"llama3.2:3b": {
 		Name:         "llama3.2:3b",
-		OllamaTag:    "llama3.2:3b",
+		Runtime:      RuntimeOllama,
+		Tag:          "llama3.2:3b",
 		InstanceType: "t3.xlarge",
 		MinRAMGB:     16,
 	},
 	"phi3:mini": {
 		Name:         "phi3:mini",
-		OllamaTag:    "phi3:mini",
+		Runtime:      RuntimeOllama,
+		Tag:          "phi3:mini",
 		InstanceType: "t3.large",
 		MinRAMGB:     8,
 	},

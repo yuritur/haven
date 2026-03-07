@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"time"
+
+	"github.com/havenapp/haven/internal/models"
 )
 
 type Identity struct {
@@ -12,7 +14,8 @@ type Identity struct {
 
 type DeployInput struct {
 	DeploymentID string
-	Model        string
+	Runtime      models.Runtime
+	ModelTag     string
 	InstanceType string
 	UserIP       string
 	APIKey       string

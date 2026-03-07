@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -63,21 +66,39 @@ func runDeploy(ctx context.Context, providerName, modelName string) error {
 
 	fmt.Printf("Deploying %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
 
-	result, err := prov.Deploy(ctx, provider.DeployInput{
+	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	cleanup := func(providerRef string) {
+		stop() // let subsequent Ctrl+C kill the process immediately
+		fmt.Printf("\nInterrupted — destroying %s...\n", providerRef)
+		if err := prov.Destroy(context.Background(), providerRef); err != nil {
+			fmt.Fprintf(os.Stderr, "destroy: %v\n", err)
+		}
+	}
+
+	result, err := prov.Deploy(sigCtx, provider.DeployInput{
 		DeploymentID: deploymentID,
-		Model:        modelCfg.OllamaTag,
+		Runtime:      modelCfg.Runtime,
+		ModelTag:     modelCfg.Tag,
 		InstanceType: modelCfg.InstanceType,
 		UserIP:       userIP + "/32",
 		APIKey:       apiKey,
 	})
 	if err != nil {
+		if sigCtx.Err() != nil {
+			cleanup(deploymentID)
+		}
 		return fmt.Errorf("deploy: %w", err)
 	}
 
 	endpoint := fmt.Sprintf("http://%s:11434", result.PublicIP)
 	fmt.Printf("\nInstance up at %s. Waiting for Ollama + model pull...\n", result.PublicIP)
 
-	if err := waitForOllama(ctx, endpoint, modelName, apiKey); err != nil {
+	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey); err != nil {
+		if sigCtx.Err() != nil {
+			cleanup(result.ProviderRef)
+		}
 		return fmt.Errorf("waiting for Ollama: %w", err)
 	}
 
