@@ -4,7 +4,7 @@
 
 # Haven
 
-Deploy open-source LLMs to your AWS account with one command. Get an OpenAI-compatible HTTPS endpoint in minutes.
+Deploy open-source LLMs to your own cloud with one command. No middlemen, no additional fees, no data leaks. Just your machine, your cloud, your models.
 
 ```bash
 haven deploy llama3.2:1b
@@ -14,38 +14,37 @@ haven deploy llama3.2:1b
 
 Open-source models are getting powerful enough to be useful for real work. But using them through third-party API providers means trusting someone else with your data -- no guarantees it won't be logged, leaked, or used to train the next model.
 
-Haven gives you a way to deploy uncensored, open-source models to your own cloud -- with no intermediaries, no data sharing, and no fear of sending sensitive information to someone else's servers. Your prompts stay on your infrastructure, period.
-
-It's also just a fast way to experiment with open-source models without extra overhead or costs beyond the cloud resources themselves.
+Haven lets you deploy models to your own infrastructure -- with no intermediaries and no fear of sending sensitive information to someone else's servers. It's also just a fast way to experiment without extra overhead or costs beyond the cloud resources themselves.
 
 ## How it works
 
-Haven provisions an EC2 instance via CloudFormation, runs [Ollama](https://ollama.com) behind an nginx TLS reverse proxy, and returns a ready-to-use endpoint with an API key.
+Haven provisions a cloud instance, sets up the model behind an encrypted reverse proxy, and returns a ready-to-use API endpoint with an access key.
 
-- No external dependencies -- single Go binary
-- Infrastructure as code via CloudFormation (no Terraform required)
-- State stored in S3 (no local files, no DynamoDB)
-- Self-signed TLS with certificate pinning (TOFU)
-- Security group restricted to your IP
+- Single binary, no external dependencies
+- Infrastructure managed as code -- automated provisioning and teardown
+- TLS encryption with certificate pinning
+- Network access restricted to your IP
 
 ## Supported models
 
-| Model | Instance | GPU | ~$/hr |
-|---|---|---|---|
-| `llama3.2:1b` | t3.large | -- | $0.08 |
-| `llama3.2:3b` | t3.xlarge | -- | $0.17 |
-| `phi3:mini` | t3.large | -- | $0.08 |
-| `qwen3.5:4b` | g5.xlarge | NVIDIA A10G | $1.01 |
-| `qwen3.5:9b` | g5.xlarge | NVIDIA A10G | $1.01 |
-| `qwen3.5:27b` | g5.2xlarge | NVIDIA A10G | $1.21 |
+| Model | GPU | ~$/hr |
+|---|---|---|
+| `llama3.2:1b` | -- | $0.08 |
+| `llama3.2:3b` | -- | $0.17 |
+| `phi3:mini` | -- | $0.08 |
+| `qwen3.5:4b` | NVIDIA A10G | $1.01 |
+| `qwen3.5:9b` | NVIDIA A10G | $1.01 |
+| `qwen3.5:27b` | NVIDIA A10G | $1.21 |
 
-*Prices are approximate AWS on-demand rates for us-east-1. Actual costs may vary by region.*
+*Prices are approximate AWS on-demand rates for us-east-1.*
 
 ## Install
 
 ```bash
 go install github.com/havenapp/haven/cmd/haven@latest
 ```
+
+<!-- TODO: add pre-built binaries via GitHub Releases -->
 
 ## Usage
 
@@ -76,7 +75,7 @@ haven cert <deployment-id>
 haven destroy <deployment-id>
 ```
 
-### Use with OpenAI SDK
+## Use with OpenAI SDK
 
 ```python
 from openai import OpenAI
