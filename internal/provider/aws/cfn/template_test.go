@@ -146,7 +146,7 @@ func TestGenerateTemplate_EBSVolumeSize(t *testing.T) {
 func TestGenerateTemplate_GPUAmi(t *testing.T) {
 	input := testInput()
 	input.InstanceType = "g5.xlarge"
-	input.EBSVolumeGB = 60
+	input.EBSVolumeGB = 80
 	parsed := parseTemplate(t, input)
 
 	params := parsed["Parameters"].(map[string]interface{})

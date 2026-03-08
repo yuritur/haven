@@ -56,14 +56,14 @@ var registry = map[string]Config{
 		Tag:          "qwen3.5:4b",
 		InstanceType: "g5.xlarge",
 		MinRAMGB:     16,
-		EBSVolumeGB:  60,
+		EBSVolumeGB:  80,
 	},
 	"qwen3.5:9b": {
 		Runtime:      RuntimeOllama,
 		Tag:          "qwen3.5:9b",
 		InstanceType: "g5.xlarge",
 		MinRAMGB:     16,
-		EBSVolumeGB:  80,
+		EBSVolumeGB:  100,
 	},
 	"qwen3.5:27b": {
 		Runtime:      RuntimeOllama,

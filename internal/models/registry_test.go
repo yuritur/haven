@@ -17,8 +17,8 @@ func TestLookup_Known(t *testing.T) {
 		{"llama3.2:1b", RuntimeOllama, "llama3.2:1b", "t3.large", 8, 30},
 		{"llama3.2:3b", RuntimeOllama, "llama3.2:3b", "t3.xlarge", 16, 30},
 		{"phi3:mini", RuntimeOllama, "phi3:mini", "t3.large", 8, 30},
-		{"qwen3.5:4b", RuntimeOllama, "qwen3.5:4b", "g5.xlarge", 16, 60},
-		{"qwen3.5:9b", RuntimeOllama, "qwen3.5:9b", "g5.xlarge", 16, 80},
+		{"qwen3.5:4b", RuntimeOllama, "qwen3.5:4b", "g5.xlarge", 16, 80},
+		{"qwen3.5:9b", RuntimeOllama, "qwen3.5:9b", "g5.xlarge", 16, 100},
 		{"qwen3.5:27b", RuntimeOllama, "qwen3.5:27b", "g5.2xlarge", 32, 100},
 	}
 	for _, tc := range cases {
