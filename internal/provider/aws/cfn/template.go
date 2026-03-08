@@ -20,9 +20,14 @@ type TemplateInput struct {
 }
 
 func GenerateTemplate(input TemplateInput) (string, error) {
-	userData, err := bootstrap.Generate(input.Runtime, input.ModelTag, input.APIKey, input.TLSCert, input.TLSKey, models.IsGPUInstance(input.InstanceType))
+	userData, err := bootstrap.Generate(input.Runtime, input.ModelTag, input.APIKey, input.TLSCert, input.TLSKey)
 	if err != nil {
 		return "", fmt.Errorf("bootstrap script: %w", err)
+	}
+
+	amiSSMPath := "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+	if models.IsGPUInstance(input.InstanceType) {
+		amiSSMPath = "/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-amazon-linux-2023/latest/ami-id"
 	}
 
 	template := map[string]interface{}{
@@ -31,7 +36,7 @@ func GenerateTemplate(input TemplateInput) (string, error) {
 		"Parameters": map[string]interface{}{
 			"LatestAmiId": map[string]interface{}{
 				"Type":    "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-				"Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64",
+				"Default": amiSSMPath,
 			},
 		},
 		"Resources": map[string]interface{}{

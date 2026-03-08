@@ -143,25 +143,31 @@ func TestGenerateTemplate_EBSVolumeSize(t *testing.T) {
 	}
 }
 
-func TestGenerateTemplate_GPUBootstrap(t *testing.T) {
+func TestGenerateTemplate_GPUAmi(t *testing.T) {
 	input := testInput()
 	input.InstanceType = "g5.xlarge"
 	input.EBSVolumeGB = 60
 	parsed := parseTemplate(t, input)
 
-	resources := parsed["Resources"].(map[string]interface{})
-	instance := resources["HavenInstance"].(map[string]interface{})
-	props := instance["Properties"].(map[string]interface{})
-	userData, ok := props["UserData"].(map[string]interface{})
-	if !ok {
-		t.Fatal("UserData not found or not an object")
+	params := parsed["Parameters"].(map[string]interface{})
+	amiParam := params["LatestAmiId"].(map[string]interface{})
+	def, _ := amiParam["Default"].(string)
+	if !strings.Contains(def, "deeplearning") {
+		t.Errorf("GPU instance should use Deep Learning AMI, got SSM path %q", def)
 	}
-	b64Str, ok := userData["Fn::Base64"].(string)
-	if !ok {
-		t.Fatal("Fn::Base64 not found in UserData")
+}
+
+func TestGenerateTemplate_CPUAmi(t *testing.T) {
+	parsed := parseTemplate(t, testInput())
+
+	params := parsed["Parameters"].(map[string]interface{})
+	amiParam := params["LatestAmiId"].(map[string]interface{})
+	def, _ := amiParam["Default"].(string)
+	if strings.Contains(def, "deeplearning") {
+		t.Errorf("CPU instance should use standard AL2023 AMI, got SSM path %q", def)
 	}
-	if !strings.Contains(b64Str, "nvidia-smi") {
-		t.Error("GPU instance template should contain nvidia-smi in UserData")
+	if !strings.Contains(def, "al2023") {
+		t.Errorf("CPU instance should use AL2023 AMI, got SSM path %q", def)
 	}
 }
 

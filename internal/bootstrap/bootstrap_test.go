@@ -22,7 +22,7 @@ func TestGenerate_EmptyTLS(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := bootstrap.Generate(models.RuntimeOllama, "llama3.2:1b", "sk-test", tc.tlsCert, tc.tlsKey, false)
+			_, err := bootstrap.Generate(models.RuntimeOllama, "llama3.2:1b", "sk-test", tc.tlsCert, tc.tlsKey)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -36,7 +36,7 @@ func TestGenerate_ContainsSubstitutions(t *testing.T) {
 	tlsCert := "FAKE_CERT_DATA"
 	tlsKey := "FAKE_KEY_DATA"
 
-	script, err := bootstrap.Generate(models.RuntimeOllama, tag, apiKey, tlsCert, tlsKey, false)
+	script, err := bootstrap.Generate(models.RuntimeOllama, tag, apiKey, tlsCert, tlsKey)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -58,33 +58,8 @@ func TestGenerate_ContainsSubstitutions(t *testing.T) {
 
 func TestGenerate_UnsupportedRuntime(t *testing.T) {
 	// TLS values are non-empty so the TLS guard does not fire before the runtime check.
-	_, err := bootstrap.Generate("vllm", "llama3.2:1b", "sk-test", "cert", "key", false)
+	_, err := bootstrap.Generate("vllm", "llama3.2:1b", "sk-test", "cert", "key")
 	if err == nil {
 		t.Fatal("expected error for unsupported runtime, got nil")
-	}
-}
-
-func TestGenerate_GPUScript(t *testing.T) {
-	script, err := bootstrap.Generate(models.RuntimeOllama, "qwen3.5:4b", "sk-test", "CERT", "KEY", true)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	for _, want := range []string{"nvidia-smi", "cuda-toolkit"} {
-		if !strings.Contains(script, want) {
-			t.Errorf("GPU script missing expected string %q", want)
-		}
-	}
-}
-
-func TestGenerate_CPUScript(t *testing.T) {
-	script, err := bootstrap.Generate(models.RuntimeOllama, "llama3.2:1b", "sk-test", "CERT", "KEY", false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(script, `"false" = "true"`) {
-		t.Error("CPU script should have GPU conditional evaluate to false")
-	}
-	if strings.Contains(script, `"true" = "true"`) {
-		t.Error("CPU script should not have GPU conditional evaluate to true")
 	}
 }

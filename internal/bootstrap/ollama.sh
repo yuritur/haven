@@ -8,16 +8,6 @@ echo '{{HAVEN_TLS_CERT_B64}}' | base64 -d > /etc/haven/server.crt
 echo '{{HAVEN_TLS_KEY_B64}}' | base64 -d > /etc/haven/server.key
 chmod 600 /etc/haven/server.key
 
-if [ "{{HAVEN_GPU}}" = "true" ]; then
-    echo "Installing NVIDIA drivers and CUDA toolkit..."
-    dnf install -y kernel-devel-$(uname -r) kernel-headers-$(uname -r)
-    dnf config-manager --add-repo \
-        https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo
-    dnf install -y cuda-toolkit nvidia-driver-latest-dkms
-    nvidia-smi || { echo "ERROR: nvidia-smi failed"; exit 1; }
-    echo "NVIDIA drivers installed successfully."
-fi
-
 echo "Installing Ollama..."
 for i in $(seq 1 5); do
     curl -fsSL https://ollama.com/install.sh | sh && break
