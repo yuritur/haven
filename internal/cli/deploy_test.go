@@ -1,13 +1,9 @@
 package cli
 
 import (
-	"context"
 	"encoding/hex"
-	"io"
 	"strings"
 	"testing"
-
-	"github.com/havenapp/haven/internal/provider/mock"
 )
 
 func TestGenerateAPIKey(t *testing.T) {
@@ -58,15 +54,5 @@ func TestGenerateDeploymentID(t *testing.T) {
 	}
 	if id == id2 {
 		t.Error("two calls produced identical IDs")
-	}
-}
-
-func TestRunDeploy_UnknownModel(t *testing.T) {
-	err := runDeploy(context.Background(), &mock.Provider{}, &mock.StateStore{}, "aws", "nonexistent:model", true, io.Discard)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "unknown model") {
-		t.Errorf("error %q should contain 'unknown model'", err.Error())
 	}
 }

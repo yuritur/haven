@@ -54,3 +54,10 @@ func TestLookup_Unknown(t *testing.T) {
 		}
 	}
 }
+
+func TestList(t *testing.T) {
+	configs := List()
+	if len(configs) != 3 {
+		t.Errorf("List() returned %d configs, want 3", len(configs))
+	}
+}

@@ -19,21 +19,44 @@ func testInput() TemplateInput {
 	}
 }
 
-func parseTemplate(t *testing.T, jsonStr string) map[string]interface{} {
-	t.Helper()
-	var parsed map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
-		t.Fatalf("JSON parse error: %v", err)
-	}
-	return parsed
-}
-
 func TestGenerateTemplate_ValidJSON(t *testing.T) {
 	out, err := GenerateTemplate(testInput())
 	if err != nil {
 		t.Fatalf("GenerateTemplate returned error: %v", err)
 	}
-	parseTemplate(t, out)
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("output is not valid JSON: %v", err)
+	}
+}
+
+func TestGenerateTemplate_Resources(t *testing.T) {
+	out, err := GenerateTemplate(testInput())
+	if err != nil {
+		t.Fatalf("GenerateTemplate returned error: %v", err)
+	}
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("JSON parse error: %v", err)
+	}
+	resources, ok := parsed["Resources"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Resources not found or not an object")
+	}
+	expected := []string{
+		"HavenVPC", "HavenSubnet", "HavenIGW", "HavenVPCGWAttachment",
+		"HavenRouteTable", "HavenRoute", "HavenSubnetRTAssoc",
+		"HavenSG", "HavenRole", "HavenInstanceProfile",
+		"HavenInstance", "HavenEIP", "HavenEIPAssoc",
+	}
+	for _, name := range expected {
+		if _, ok := resources[name]; !ok {
+			t.Errorf("resource %q not found", name)
+		}
+	}
+	if len(resources) != 13 {
+		t.Errorf("resource count = %d, want 13", len(resources))
+	}
 }
 
 func TestGenerateTemplate_SecurityGroup(t *testing.T) {
@@ -42,35 +65,20 @@ func TestGenerateTemplate_SecurityGroup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateTemplate returned error: %v", err)
 	}
-	parsed := parseTemplate(t, out)
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
 
-	resources, ok := parsed["Resources"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Resources not found or not an object")
-	}
-	sg, ok := resources["HavenSG"].(map[string]interface{})
-	if !ok {
-		t.Fatal("HavenSG not found or not an object")
-	}
-	props, ok := sg["Properties"].(map[string]interface{})
-	if !ok {
-		t.Fatal("HavenSG Properties not found or not an object")
-	}
-	ingress, ok := props["SecurityGroupIngress"].([]interface{})
-	if !ok {
-		t.Fatal("SecurityGroupIngress not found or not an array")
-	}
+	resources := parsed["Resources"].(map[string]interface{})
+	sg := resources["HavenSG"].(map[string]interface{})
+	props := sg["Properties"].(map[string]interface{})
+	ingress := props["SecurityGroupIngress"].([]interface{})
 	if len(ingress) == 0 {
 		t.Fatal("no ingress rules found")
 	}
-	rule, ok := ingress[0].(map[string]interface{})
-	if !ok {
-		t.Fatal("first ingress rule is not an object")
-	}
-	cidr, ok := rule["CidrIp"].(string)
-	if !ok {
-		t.Fatal("CidrIp not found or not a string")
-	}
+	rule := ingress[0].(map[string]interface{})
+	cidr, _ := rule["CidrIp"].(string)
 	if cidr != input.UserIP {
 		t.Errorf("CidrIp = %q, want %q", cidr, input.UserIP)
 	}
@@ -83,24 +91,15 @@ func TestGenerateTemplate_InstanceType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateTemplate returned error: %v", err)
 	}
-	parsed := parseTemplate(t, out)
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
 
-	resources, ok := parsed["Resources"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Resources not found or not an object")
-	}
-	instance, ok := resources["HavenInstance"].(map[string]interface{})
-	if !ok {
-		t.Fatal("HavenInstance not found or not an object")
-	}
-	props, ok := instance["Properties"].(map[string]interface{})
-	if !ok {
-		t.Fatal("HavenInstance Properties not found or not an object")
-	}
-	it, ok := props["InstanceType"].(string)
-	if !ok {
-		t.Fatal("InstanceType not found or not a string")
-	}
+	resources := parsed["Resources"].(map[string]interface{})
+	instance := resources["HavenInstance"].(map[string]interface{})
+	props := instance["Properties"].(map[string]interface{})
+	it, _ := props["InstanceType"].(string)
 	if it != "t3.xlarge" {
 		t.Errorf("InstanceType = %q, want %q", it, "t3.xlarge")
 	}
@@ -111,7 +110,10 @@ func TestGenerateTemplate_Outputs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateTemplate returned error: %v", err)
 	}
-	parsed := parseTemplate(t, out)
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
 
 	outputs, ok := parsed["Outputs"].(map[string]interface{})
 	if !ok {
