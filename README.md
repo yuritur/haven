@@ -12,16 +12,16 @@ haven deploy llama3.2:1b
 
 ## Motivation
 
-Open-source models are getting powerful enough to be useful for real work. But using them through third-party API providers means trusting someone else with your data -- no guarantees it won't be logged, leaked, or used to train the next model.
+Open-source models are getting powerful enough to be useful for real work. But using them through third-party API providers means trusting someone else with your data — no guarantees it won't be logged, leaked, or used to train the next model.
 
-Haven lets you deploy models to your own infrastructure -- with no intermediaries and no fear of sending sensitive information to someone else's servers. It's also just a fast way to experiment without extra overhead or costs beyond the cloud resources themselves.
+Haven lets you deploy models to your own infrastructure — with no intermediaries and no fear of sending sensitive information to someone else's servers. It's also just a fast way to experiment without extra overhead or costs beyond the cloud resources themselves.
 
 ## How it works
 
 Haven provisions a cloud instance, sets up the model behind an encrypted reverse proxy, and returns a ready-to-use API endpoint with an access key.
 
 - Single binary, no external dependencies
-- Infrastructure managed as code -- automated provisioning and teardown
+- Infrastructure managed as code — automated provisioning and teardown
 - TLS encryption with certificate pinning
 - Network access restricted to your IP
 
@@ -29,9 +29,9 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 | Model | GPU | ~$/hr |
 |---|---|---|
-| `llama3.2:1b` | -- | $0.08 |
-| `llama3.2:3b` | -- | $0.17 |
-| `phi3:mini` | -- | $0.08 |
+| `llama3.2:1b` | — | $0.08 |
+| `llama3.2:3b` | — | $0.17 |
+| `phi3:mini` | — | $0.08 |
 | `qwen3.5:4b` | NVIDIA A10G | $1.01 |
 | `qwen3.5:9b` | NVIDIA A10G | $1.01 |
 | `qwen3.5:27b` | NVIDIA A10G | $1.21 |
@@ -93,4 +93,4 @@ response = client.chat.completions.create(
 
 ## License
 
-MIT -- see [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE)
