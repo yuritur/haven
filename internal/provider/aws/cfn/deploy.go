@@ -25,6 +25,7 @@ type DeployInput struct {
 	APIKey       string
 	TLSCert      string
 	TLSKey       string
+	EBSVolumeGB  int
 	Out          io.Writer
 }
 
@@ -43,6 +44,7 @@ func Deploy(ctx context.Context, cfg aws.Config, input DeployInput) (DeployResul
 		InstanceType: input.InstanceType,
 		TLSCert:      input.TLSCert,
 		TLSKey:       input.TLSKey,
+		EBSVolumeGB:  input.EBSVolumeGB,
 	})
 	if err != nil {
 		return DeployResult{}, fmt.Errorf("generate template: %w", err)

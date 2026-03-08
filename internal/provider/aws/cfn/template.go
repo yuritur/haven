@@ -16,10 +16,11 @@ type TemplateInput struct {
 	InstanceType string
 	TLSCert      string
 	TLSKey       string
+	EBSVolumeGB  int
 }
 
 func GenerateTemplate(input TemplateInput) (string, error) {
-	userData, err := bootstrap.Generate(input.Runtime, input.ModelTag, input.APIKey, input.TLSCert, input.TLSKey)
+	userData, err := bootstrap.Generate(input.Runtime, input.ModelTag, input.APIKey, input.TLSCert, input.TLSKey, models.IsGPUInstance(input.InstanceType))
 	if err != nil {
 		return "", fmt.Errorf("bootstrap script: %w", err)
 	}
@@ -144,7 +145,7 @@ func GenerateTemplate(input TemplateInput) (string, error) {
 						map[string]interface{}{
 							"DeviceName": "/dev/xvda",
 							"Ebs": map[string]interface{}{
-								"VolumeSize": 30,
+								"VolumeSize": input.EBSVolumeGB,
 								"VolumeType": "gp3",
 								"Encrypted":  true,
 							},

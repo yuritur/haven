@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/havenapp/haven/internal/models"
@@ -12,7 +13,7 @@ import (
 //go:embed ollama.sh
 var ollamaScript string
 
-func Generate(runtime models.Runtime, tag, apiKey, tlsCert, tlsKey string) (string, error) {
+func Generate(runtime models.Runtime, tag, apiKey, tlsCert, tlsKey string, gpu bool) (string, error) {
 	switch runtime {
 	case models.RuntimeOllama:
 		if tlsCert == "" || tlsKey == "" {
@@ -25,6 +26,7 @@ func Generate(runtime models.Runtime, tag, apiKey, tlsCert, tlsKey string) (stri
 			"{{HAVEN_API_KEY}}", apiKey,
 			"{{HAVEN_TLS_CERT_B64}}", certB64,
 			"{{HAVEN_TLS_KEY_B64}}", keyB64,
+			"{{HAVEN_GPU}}", strconv.FormatBool(gpu),
 		)
 		return r.Replace(ollamaScript), nil
 	default:

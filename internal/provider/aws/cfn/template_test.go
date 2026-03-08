@@ -16,6 +16,7 @@ func testInput() TemplateInput {
 		InstanceType: "t3.large",
 		TLSCert:      "FAKE_CERT_PEM",
 		TLSKey:       "FAKE_KEY_PEM",
+		EBSVolumeGB:  30,
 	}
 }
 
