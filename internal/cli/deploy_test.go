@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/havenapp/haven/internal/provider/mock"
 )
 
 func TestGenerateAPIKey(t *testing.T) {
@@ -60,7 +62,7 @@ func TestGenerateDeploymentID(t *testing.T) {
 }
 
 func TestRunDeploy_UnknownModel(t *testing.T) {
-	err := runDeploy(context.Background(), nil, nil, "aws", "nonexistent:model", true, io.Discard)
+	err := runDeploy(context.Background(), &mock.Provider{}, &mock.StateStore{}, "aws", "nonexistent:model", true, io.Discard)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
