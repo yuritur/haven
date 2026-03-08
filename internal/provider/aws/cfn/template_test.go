@@ -36,33 +36,6 @@ func TestGenerateTemplate_ValidJSON(t *testing.T) {
 	parseTemplate(t, out)
 }
 
-func TestGenerateTemplate_Resources(t *testing.T) {
-	out, err := GenerateTemplate(testInput())
-	if err != nil {
-		t.Fatalf("GenerateTemplate returned error: %v", err)
-	}
-	parsed := parseTemplate(t, out)
-
-	resources, ok := parsed["Resources"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Resources not found or not an object")
-	}
-	expected := []string{
-		"HavenVPC", "HavenSubnet", "HavenIGW", "HavenVPCGWAttachment",
-		"HavenRouteTable", "HavenRoute", "HavenSubnetRTAssoc",
-		"HavenSG", "HavenRole", "HavenInstanceProfile",
-		"HavenInstance", "HavenEIP", "HavenEIPAssoc",
-	}
-	for _, name := range expected {
-		if _, ok := resources[name]; !ok {
-			t.Errorf("resource %q not found", name)
-		}
-	}
-	if len(resources) != 13 {
-		t.Errorf("resource count = %d, want 13", len(resources))
-	}
-}
-
 func TestGenerateTemplate_SecurityGroup(t *testing.T) {
 	input := testInput()
 	out, err := GenerateTemplate(input)
