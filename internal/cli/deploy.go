@@ -37,20 +37,15 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runDeploy(cmd.Context(), prov, store, *providerName, args[0], *verbose)
+			return runDeploy(cmd.Context(), prov, store, *providerName, args[0], *verbose, out)
 		},
 	}
 }
 
-func runDeploy(ctx context.Context, prov provider.Provider, store provider.StateStore, providerName string, modelName string, verbose bool) error {
+func runDeploy(ctx context.Context, prov provider.Provider, store provider.StateStore, providerName string, modelName string, verbose bool, out io.Writer) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
-	}
-
-	var out io.Writer = io.Discard
-	if verbose {
-		out = os.Stdout
 	}
 
 	identity, err := prov.Identity(ctx)
