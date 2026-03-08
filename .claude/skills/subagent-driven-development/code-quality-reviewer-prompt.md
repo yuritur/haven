@@ -7,14 +7,38 @@ Use this template when dispatching a code quality reviewer subagent.
 **Only dispatch after spec compliance review passes.**
 
 ```
-Task tool (superpowers:code-reviewer):
-  Use template at requesting-code-review/code-reviewer.md
+Agent tool (code-reviewer):
+  description: "Review code quality for Task N"
+  prompt: |
+    Review the code changes between BASE_SHA and HEAD_SHA for quality.
 
-  WHAT_WAS_IMPLEMENTED: [from implementer's report]
-  PLAN_OR_REQUIREMENTS: Task N from [plan-file]
-  BASE_SHA: [commit before task]
-  HEAD_SHA: [current commit]
-  DESCRIPTION: [task summary]
+    ## What Was Implemented
+
+    [from implementer's report]
+
+    ## Requirements
+
+    Task N from [plan-file]:
+    [FULL TEXT of task requirements]
+
+    ## Review Scope
+
+    git diff BASE_SHA..HEAD_SHA
+
+    ## Your Job
+
+    Review for:
+    - Code quality, readability, maintainability
+    - Error handling correctness
+    - Test coverage and test quality
+    - Naming conventions and consistency with codebase
+    - YAGNI violations (over-engineering)
+    - Security issues
+
+    Report:
+    - Strengths: what's done well
+    - Issues (Critical/Important/Minor): specific problems with file:line
+    - Assessment: Approved / Changes Requested
 ```
 
 **Code reviewer returns:** Strengths, Issues (Critical/Important/Minor), Assessment
