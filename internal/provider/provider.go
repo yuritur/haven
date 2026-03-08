@@ -22,6 +22,7 @@ type DeployInput struct {
 	TLSCert        string
 	TLSKey         string
 	TLSFingerprint string
+	EBSVolumeGB    int
 }
 
 type DeployResult struct {

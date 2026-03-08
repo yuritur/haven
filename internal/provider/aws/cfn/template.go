@@ -16,6 +16,7 @@ type TemplateInput struct {
 	InstanceType string
 	TLSCert      string
 	TLSKey       string
+	EBSVolumeGB  int
 }
 
 func GenerateTemplate(input TemplateInput) (string, error) {
@@ -24,13 +25,18 @@ func GenerateTemplate(input TemplateInput) (string, error) {
 		return "", fmt.Errorf("bootstrap script: %w", err)
 	}
 
+	amiSSMPath := "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+	if models.IsGPUInstance(input.InstanceType) {
+		amiSSMPath = "/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-amazon-linux-2023/latest/ami-id"
+	}
+
 	template := map[string]interface{}{
 		"AWSTemplateFormatVersion": "2010-09-09",
 		"Description":              "Haven deployment",
 		"Parameters": map[string]interface{}{
 			"LatestAmiId": map[string]interface{}{
 				"Type":    "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-				"Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64",
+				"Default": amiSSMPath,
 			},
 		},
 		"Resources": map[string]interface{}{
@@ -144,7 +150,7 @@ func GenerateTemplate(input TemplateInput) (string, error) {
 						map[string]interface{}{
 							"DeviceName": "/dev/xvda",
 							"Ebs": map[string]interface{}{
-								"VolumeSize": 30,
+								"VolumeSize": input.EBSVolumeGB,
 								"VolumeType": "gp3",
 								"Encrypted":  true,
 							},

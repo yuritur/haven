@@ -2,6 +2,7 @@ package cfn
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/havenapp/haven/internal/models"
@@ -16,6 +17,7 @@ func testInput() TemplateInput {
 		InstanceType: "t3.large",
 		TLSCert:      "FAKE_CERT_PEM",
 		TLSKey:       "FAKE_KEY_PEM",
+		EBSVolumeGB:  30,
 	}
 }
 
@@ -102,6 +104,70 @@ func TestGenerateTemplate_InstanceType(t *testing.T) {
 	it, _ := props["InstanceType"].(string)
 	if it != "t3.xlarge" {
 		t.Errorf("InstanceType = %q, want %q", it, "t3.xlarge")
+	}
+}
+
+func parseTemplate(t *testing.T, input TemplateInput) map[string]interface{} {
+	t.Helper()
+	out, err := GenerateTemplate(input)
+	if err != nil {
+		t.Fatalf("GenerateTemplate returned error: %v", err)
+	}
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
+	return parsed
+}
+
+func TestGenerateTemplate_EBSVolumeSize(t *testing.T) {
+	input := testInput()
+	input.EBSVolumeGB = 80
+	parsed := parseTemplate(t, input)
+
+	resources := parsed["Resources"].(map[string]interface{})
+	instance := resources["HavenInstance"].(map[string]interface{})
+	props := instance["Properties"].(map[string]interface{})
+	bdm := props["BlockDeviceMappings"].([]interface{})
+	if len(bdm) == 0 {
+		t.Fatal("no block device mappings found")
+	}
+	first := bdm[0].(map[string]interface{})
+	ebs := first["Ebs"].(map[string]interface{})
+	volSize, ok := ebs["VolumeSize"].(float64)
+	if !ok {
+		t.Fatal("VolumeSize not found or not a number")
+	}
+	if volSize != 80 {
+		t.Errorf("VolumeSize = %v, want 80", volSize)
+	}
+}
+
+func TestGenerateTemplate_GPUAmi(t *testing.T) {
+	input := testInput()
+	input.InstanceType = "g5.xlarge"
+	input.EBSVolumeGB = 80
+	parsed := parseTemplate(t, input)
+
+	params := parsed["Parameters"].(map[string]interface{})
+	amiParam := params["LatestAmiId"].(map[string]interface{})
+	def, _ := amiParam["Default"].(string)
+	if !strings.Contains(def, "deeplearning") {
+		t.Errorf("GPU instance should use Deep Learning AMI, got SSM path %q", def)
+	}
+}
+
+func TestGenerateTemplate_CPUAmi(t *testing.T) {
+	parsed := parseTemplate(t, testInput())
+
+	params := parsed["Parameters"].(map[string]interface{})
+	amiParam := params["LatestAmiId"].(map[string]interface{})
+	def, _ := amiParam["Default"].(string)
+	if strings.Contains(def, "deeplearning") {
+		t.Errorf("CPU instance should use standard AL2023 AMI, got SSM path %q", def)
+	}
+	if !strings.Contains(def, "al2023") {
+		t.Errorf("CPU instance should use AL2023 AMI, got SSM path %q", def)
 	}
 }
 

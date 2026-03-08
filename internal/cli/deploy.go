@@ -103,6 +103,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		TLSCert:        tlsCert,
 		TLSKey:         tlsKey,
 		TLSFingerprint: tlsFingerprint,
+		EBSVolumeGB:    modelCfg.EBSVolumeGB,
 	})
 
 	if spin != nil {
@@ -144,7 +145,12 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		spin = tui.StartSpinner("Waiting for model to be ready...")
 	}
 
-	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out); err != nil {
+	pollTimeout := 15 * time.Minute
+	if models.IsGPUInstance(modelCfg.InstanceType) {
+		pollTimeout = 30 * time.Minute
+	}
+
+	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
 		if spin != nil {
 			spin.Stop()
 		}
@@ -196,12 +202,12 @@ func detectPublicIP() (string, error) {
 	return strings.TrimSpace(string(body)), nil
 }
 
-func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint string, verbose io.Writer) error {
+func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint string, verbose io.Writer, timeout time.Duration) error {
 	client := &http.Client{
 		Timeout:   10 * time.Second,
 		Transport: certutil.NewPinnedTransport(fingerprint),
 	}
-	deadline := time.Now().Add(15 * time.Minute)
+	deadline := time.Now().Add(timeout)
 
 	for time.Now().Before(deadline) {
 		select {
@@ -245,7 +251,7 @@ func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint str
 		case <-time.After(10 * time.Second):
 		}
 	}
-	return fmt.Errorf("timed out after 15 minutes")
+	return fmt.Errorf("timed out after %v", timeout)
 }
 
 func generateAPIKey() (string, error) {

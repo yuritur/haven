@@ -1,6 +1,6 @@
 ---
 name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+description: MUST trigger when starting implementation of a plan — after planning is complete and tasks are defined, use this skill to execute them via subagents. Triggers on - transitioning from planning to coding, executing a plan with multiple tasks, beginning development work from a design doc or plan file, when the user says "let's implement" or "start building" after a plan exists. Even if only 2-3 tasks, this workflow applies.
 ---
 
 # Subagent-Driven Development
@@ -11,29 +11,18 @@ Execute plan by dispatching fresh subagent per task, with two-stage review after
 
 ## When to Use
 
-```dot
-digraph when_to_use {
-    "Have implementation plan?" [shape=diamond];
-    "Tasks mostly independent?" [shape=diamond];
-    "Stay in this session?" [shape=diamond];
-    "subagent-driven-development" [shape=box];
-    "executing-plans" [shape=box];
-    "Manual execution or brainstorm first" [shape=box];
+This skill is the bridge between planning and implementation. Once a plan exists (whether from brainstorming, a design doc, or a plan file), this skill takes over to execute it systematically.
 
-    "Have implementation plan?" -> "Tasks mostly independent?" [label="yes"];
-    "Have implementation plan?" -> "Manual execution or brainstorm first" [label="no"];
-    "Tasks mostly independent?" -> "Stay in this session?" [label="yes"];
-    "Tasks mostly independent?" -> "Manual execution or brainstorm first" [label="no - tightly coupled"];
-    "Stay in this session?" -> "subagent-driven-development" [label="yes"];
-    "Stay in this session?" -> "executing-plans" [label="no - parallel session"];
-}
-```
+Trigger when:
+- A plan has been created and you're ready to implement
+- The user says "let's build this", "implement the plan", "start coding"
+- You've just finished planning and the next step is writing code
+- There's a plan file in `docs/plans/` ready for execution
 
-**vs. Executing Plans (parallel session):**
-- Same session (no context switch)
-- Fresh subagent per task (no context pollution)
-- Two-stage review after each task: spec compliance first, then code quality
-- Faster iteration (no human-in-loop between tasks)
+Do NOT use when:
+- There's no plan yet (use brainstorming first)
+- Tasks are tightly coupled and must share context (implement manually)
+- It's a single small change (just do it directly)
 
 ## The Process
 
@@ -59,7 +48,7 @@ digraph process {
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
-    "Use superpowers:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
+    "Create iteration file in docs/iterations/" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
@@ -78,7 +67,7 @@ digraph process {
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Use superpowers:finishing-a-development-branch";
+    "Dispatch final code reviewer subagent for entire implementation" -> "Create iteration file in docs/iterations/";
 }
 ```
 
@@ -161,6 +150,7 @@ Code reviewer: ✅ Approved
 [Dispatch final code-reviewer]
 Final reviewer: All requirements met, ready to merge
 
+[Create iteration file docs/iterations/004-2026-03-09-feature-name.md]
 Done!
 ```
 
@@ -227,16 +217,67 @@ Done!
 - Dispatch fix subagent with specific instructions
 - Don't try to fix manually (context pollution)
 
+## Finishing Up: Iteration File
+
+After all tasks are complete and the final code review passes, create an iteration log file.
+
+**File naming:** `docs/iterations/NNN-YYYY-MM-DD-feature-name.md`
+- NNN = next sequential number (check existing files in `docs/iterations/`)
+- YYYY-MM-DD = today's date
+- feature-name = short kebab-case description
+
+**Template:**
+
+```markdown
+# Iteration NNN — [Feature title]
+
+**Date:** YYYY-MM-DD
+**Branch:** `[branch-name]`
+
+## What was done
+
+### Problem being solved
+
+[1-2 sentences: what problem existed before this work]
+
+### Solution
+
+[Brief description of the approach taken]
+
+### Files created
+
+| File | Description |
+|---|---|
+| `path/to/file.go` | What it does |
+
+### Files modified
+
+| File | Change |
+|---|---|
+| `path/to/file.go` | What changed |
+
+## What works
+
+[Build status, test results, verification commands and their output]
+
+## What's not covered
+
+[Known gaps, things intentionally skipped]
+
+## What's left
+
+[Next steps, follow-up work]
+```
+
+Keep it factual and concise. The iteration file is a record of what was done, not a narrative. Include actual test counts, build commands, and concrete results.
+
 ## Integration
 
-**Required workflow skills:**
-- **superpowers:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
-- **superpowers:writing-plans** - Creates the plan this skill executes
-- **superpowers:requesting-code-review** - Code review template for reviewer subagents
-- **superpowers:finishing-a-development-branch** - Complete development after all tasks
+**Related skills:**
+- **git-workflow** — Sets up branch before this skill runs; creates PR after
+- **brainstorming** — Creates the plan that this skill executes
+- **code-review** — Used for the final code review subagent
 
-**Subagents should use:**
-- **superpowers:test-driven-development** - Subagents follow TDD for each task
-
-**Alternative workflow:**
-- **superpowers:executing-plans** - Use for parallel session instead of same-session execution
+**Subagents should:**
+- Follow TDD when writing tests
+- Use the `code-reviewer` agent type for code quality reviews
