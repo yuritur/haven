@@ -119,14 +119,14 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 	endpoint := fmt.Sprintf("https://%s:11434", result.PublicIP)
 
 	deployment := provider.Deployment{
-		ID:           deploymentID,
-		Provider:     providerName,
-		ProviderRef:  result.ProviderRef,
-		CreatedAt:    time.Now().UTC(),
-		Region:       identity.Region,
-		Model:        modelName,
-		InstanceType: modelCfg.InstanceType,
-		InstanceID:   result.InstanceID,
+		ID:             deploymentID,
+		Provider:       providerName,
+		ProviderRef:    result.ProviderRef,
+		CreatedAt:      time.Now().UTC(),
+		Region:         identity.Region,
+		Model:          modelName,
+		InstanceType:   modelCfg.InstanceType,
+		InstanceID:     result.InstanceID,
 		PublicIP:       result.PublicIP,
 		Endpoint:       endpoint + "/v1",
 		APIKey:         apiKey,

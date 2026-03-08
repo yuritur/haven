@@ -31,20 +31,20 @@ type DeployResult struct {
 }
 
 type Deployment struct {
-	ID             string    `json:"deployment_id"`
-	Provider       string    `json:"provider"`
-	ProviderRef    string    `json:"provider_ref"`
-	CreatedAt      time.Time `json:"created_at"`
-	Region         string    `json:"region"`
-	Model          string    `json:"model"`
-	InstanceType   string    `json:"instance_type"`
-	InstanceID     string    `json:"instance_id"`
-	PublicIP       string    `json:"public_ip"`
-	Endpoint       string    `json:"endpoint"`
-	APIKey         string    `json:"api_key"`
+	ID           string    `json:"deployment_id"`
+	Provider     string    `json:"provider"`
+	ProviderRef  string    `json:"provider_ref"`
+	CreatedAt    time.Time `json:"created_at"`
+	Region       string    `json:"region"`
+	Model        string    `json:"model"`
+	InstanceType string    `json:"instance_type"`
+	InstanceID   string    `json:"instance_id"`
+	PublicIP     string    `json:"public_ip"`
+	Endpoint     string    `json:"endpoint"`
+	APIKey       string    `json:"api_key"`
 	// TLSKey is intentionally absent — private key is never persisted to state.
-	TLSCert        string    `json:"tls_cert"`
-	TLSFingerprint string    `json:"tls_fingerprint"`
+	TLSCert        string `json:"tls_cert"`
+	TLSFingerprint string `json:"tls_fingerprint"`
 }
 
 type Provider interface {

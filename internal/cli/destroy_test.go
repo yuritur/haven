@@ -23,9 +23,9 @@ func TestRunDestroy_Success(t *testing.T) {
 	store := &mock.StateStore{
 		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
-				ID:          "haven-test1234",
-				ProviderRef: "stack-test",
-				Model:       "llama3.2:1b",
+				ID:           "haven-test1234",
+				ProviderRef:  "stack-test",
+				Model:        "llama3.2:1b",
 				InstanceType: "t3.large",
 			}, nil
 		},
