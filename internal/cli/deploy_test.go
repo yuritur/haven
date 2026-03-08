@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"context"
 	"encoding/hex"
+	"io"
 	"strings"
 	"testing"
 )
@@ -54,5 +56,15 @@ func TestGenerateDeploymentID(t *testing.T) {
 	}
 	if id == id2 {
 		t.Error("two calls produced identical IDs")
+	}
+}
+
+func TestRunDeploy_UnknownModel(t *testing.T) {
+	err := runDeploy(context.Background(), nil, nil, "aws", "nonexistent:model", true, io.Discard)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown model") {
+		t.Errorf("error %q should contain 'unknown model'", err.Error())
 	}
 }
