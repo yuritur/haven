@@ -35,7 +35,7 @@ func (s *Spinner) run() {
 			close(s.doneC)
 			return
 		case <-ticker.C:
-			fmt.Printf("\r%s  %s", frames[i%len(frames)], s.msg)
+			fmt.Printf("\r\033[33m%s\033[0m  %s", frames[i%len(frames)], s.msg)
 			i++
 		}
 	}

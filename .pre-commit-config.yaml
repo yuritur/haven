@@ -4,17 +4,10 @@ repos:
     hooks:
       - id: go-fmt
         args: [-w]
-        files: ^seaweed_events/
       - id: go-vet-mod
-        files: ^seaweed_events/
       - id: go-build-mod
-        files: ^seaweed_events/
       - id: go-mod-tidy
-        files: ^seaweed_events/
   - repo: https://github.com/golangci/golangci-lint
     rev: v1.64.0
     hooks:
       - id: golangci-lint
-        files: ^seaweed_events/
-        entry: bash -c 'cd seaweed_events && go mod download && golangci-lint run'
-        pass_filenames: false

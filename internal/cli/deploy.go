@@ -29,23 +29,21 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --provider aws",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDeploy(cmd.Context(), *providerName, args[0], *verbose)
+			var out io.Writer = io.Discard
+			if *verbose {
+				out = os.Stdout
+			}
+			prov, store, err := buildProviderAndStore(cmd.Context(), *providerName, out)
+			if err != nil {
+				return err
+			}
+			return runDeploy(cmd.Context(), prov, store, *providerName, args[0], *verbose, out)
 		},
 	}
 }
 
-func runDeploy(ctx context.Context, providerName string, modelName string, verbose bool) error {
+func runDeploy(ctx context.Context, prov provider.Provider, store provider.StateStore, providerName string, modelName string, verbose bool, out io.Writer) error {
 	modelCfg, err := models.Lookup(modelName)
-	if err != nil {
-		return err
-	}
-
-	var out io.Writer = io.Discard
-	if verbose {
-		out = os.Stdout
-	}
-
-	prov, store, err := buildProviderAndStore(ctx, providerName, out)
 	if err != nil {
 		return err
 	}
@@ -121,14 +119,14 @@ func runDeploy(ctx context.Context, providerName string, modelName string, verbo
 	endpoint := fmt.Sprintf("https://%s:11434", result.PublicIP)
 
 	deployment := provider.Deployment{
-		ID:           deploymentID,
-		Provider:     providerName,
-		ProviderRef:  result.ProviderRef,
-		CreatedAt:    time.Now().UTC(),
-		Region:       identity.Region,
-		Model:        modelName,
-		InstanceType: modelCfg.InstanceType,
-		InstanceID:   result.InstanceID,
+		ID:             deploymentID,
+		Provider:       providerName,
+		ProviderRef:    result.ProviderRef,
+		CreatedAt:      time.Now().UTC(),
+		Region:         identity.Region,
+		Model:          modelName,
+		InstanceType:   modelCfg.InstanceType,
+		InstanceID:     result.InstanceID,
 		PublicIP:       result.PublicIP,
 		Endpoint:       endpoint + "/v1",
 		APIKey:         apiKey,

@@ -66,7 +66,9 @@ func TestGenerateTemplate_SecurityGroup(t *testing.T) {
 		t.Fatalf("GenerateTemplate returned error: %v", err)
 	}
 	var parsed map[string]interface{}
-	json.Unmarshal([]byte(out), &parsed)
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
 
 	resources := parsed["Resources"].(map[string]interface{})
 	sg := resources["HavenSG"].(map[string]interface{})
@@ -90,7 +92,9 @@ func TestGenerateTemplate_InstanceType(t *testing.T) {
 		t.Fatalf("GenerateTemplate returned error: %v", err)
 	}
 	var parsed map[string]interface{}
-	json.Unmarshal([]byte(out), &parsed)
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
 
 	resources := parsed["Resources"].(map[string]interface{})
 	instance := resources["HavenInstance"].(map[string]interface{})
@@ -107,7 +111,9 @@ func TestGenerateTemplate_Outputs(t *testing.T) {
 		t.Fatalf("GenerateTemplate returned error: %v", err)
 	}
 	var parsed map[string]interface{}
-	json.Unmarshal([]byte(out), &parsed)
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("json.Unmarshal failed: %v", err)
+	}
 
 	outputs, ok := parsed["Outputs"].(map[string]interface{})
 	if !ok {

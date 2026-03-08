@@ -6,6 +6,8 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
+
+	"github.com/havenapp/haven/internal/provider"
 )
 
 func newStatusCmd(providerName *string) *cobra.Command {
@@ -14,17 +16,16 @@ func newStatusCmd(providerName *string) *cobra.Command {
 		Short: "List active deployments",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(cmd.Context(), *providerName)
+			_, store, err := buildProviderAndStore(cmd.Context(), *providerName, io.Discard)
+			if err != nil {
+				return err
+			}
+			return runStatus(cmd.Context(), store)
 		},
 	}
 }
 
-func runStatus(ctx context.Context, providerName string) error {
-	_, store, err := buildProviderAndStore(ctx, providerName, io.Discard)
-	if err != nil {
-		return err
-	}
-
+func runStatus(ctx context.Context, store provider.StateStore) error {
 	deployments, err := store.List(ctx)
 	if err != nil {
 		return fmt.Errorf("list deployments: %w", err)
