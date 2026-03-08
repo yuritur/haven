@@ -34,7 +34,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 	}
 }
 
-func runDeploy(ctx context.Context, providerName, modelName string, verbose bool) error {
+func runDeploy(ctx context.Context, providerName string, modelName string, verbose bool) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
