@@ -6,6 +6,8 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
+
+	"github.com/havenapp/haven/internal/provider"
 )
 
 func newCertCmd(providerName *string) *cobra.Command {
@@ -18,17 +20,16 @@ func newCertCmd(providerName *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&showFingerprint, "fingerprint", false, "Print SHA-256 fingerprint instead of PEM certificate")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return runCert(cmd.Context(), *providerName, args[0], showFingerprint)
+		_, store, err := buildProviderAndStore(cmd.Context(), *providerName, io.Discard)
+		if err != nil {
+			return err
+		}
+		return runCert(cmd.Context(), store, args[0], showFingerprint)
 	}
 	return cmd
 }
 
-func runCert(ctx context.Context, providerName, id string, showFingerprint bool) error {
-	_, store, err := buildProviderAndStore(ctx, providerName, io.Discard)
-	if err != nil {
-		return err
-	}
-
+func runCert(ctx context.Context, store provider.StateStore, id string, showFingerprint bool) error {
 	d, err := store.Load(ctx, id)
 	if err != nil {
 		return fmt.Errorf("load deployment: %w", err)

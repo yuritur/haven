@@ -29,12 +29,20 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --provider aws",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runDeploy(cmd.Context(), *providerName, args[0], *verbose)
+			var out io.Writer = io.Discard
+			if *verbose {
+				out = os.Stdout
+			}
+			prov, store, err := buildProviderAndStore(cmd.Context(), *providerName, out)
+			if err != nil {
+				return err
+			}
+			return runDeploy(cmd.Context(), prov, store, *providerName, args[0], *verbose)
 		},
 	}
 }
 
-func runDeploy(ctx context.Context, providerName string, modelName string, verbose bool) error {
+func runDeploy(ctx context.Context, prov provider.Provider, store provider.StateStore, providerName string, modelName string, verbose bool) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
@@ -43,11 +51,6 @@ func runDeploy(ctx context.Context, providerName string, modelName string, verbo
 	var out io.Writer = io.Discard
 	if verbose {
 		out = os.Stdout
-	}
-
-	prov, store, err := buildProviderAndStore(ctx, providerName, out)
-	if err != nil {
-		return err
 	}
 
 	identity, err := prov.Identity(ctx)
