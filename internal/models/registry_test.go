@@ -12,10 +12,14 @@ func TestLookup_Known(t *testing.T) {
 		wantTag      string
 		wantInstance string
 		wantRAM      int
+		wantEBS      int
 	}{
-		{"llama3.2:1b", RuntimeOllama, "llama3.2:1b", "t3.large", 8},
-		{"llama3.2:3b", RuntimeOllama, "llama3.2:3b", "t3.xlarge", 16},
-		{"phi3:mini", RuntimeOllama, "phi3:mini", "t3.large", 8},
+		{"llama3.2:1b", RuntimeOllama, "llama3.2:1b", "t3.large", 8, 30},
+		{"llama3.2:3b", RuntimeOllama, "llama3.2:3b", "t3.xlarge", 16, 30},
+		{"phi3:mini", RuntimeOllama, "phi3:mini", "t3.large", 8, 30},
+		{"qwen3.5:4b", RuntimeOllama, "qwen3.5:4b", "g5.xlarge", 16, 60},
+		{"qwen3.5:9b", RuntimeOllama, "qwen3.5:9b", "g5.xlarge", 16, 80},
+		{"qwen3.5:27b", RuntimeOllama, "qwen3.5:27b", "g5.2xlarge", 32, 100},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -34,6 +38,9 @@ func TestLookup_Known(t *testing.T) {
 			}
 			if cfg.MinRAMGB != tc.wantRAM {
 				t.Errorf("MinRAMGB = %d, want %d", cfg.MinRAMGB, tc.wantRAM)
+			}
+			if cfg.EBSVolumeGB != tc.wantEBS {
+				t.Errorf("EBSVolumeGB = %d, want %d", cfg.EBSVolumeGB, tc.wantEBS)
 			}
 		})
 	}
@@ -57,7 +64,30 @@ func TestLookup_Unknown(t *testing.T) {
 
 func TestList(t *testing.T) {
 	configs := List()
-	if len(configs) != 3 {
-		t.Errorf("List() returned %d configs, want 3", len(configs))
+	if len(configs) != 6 {
+		t.Errorf("List() returned %d configs, want 6", len(configs))
+	}
+}
+
+func TestIsGPUInstance(t *testing.T) {
+	cases := []struct {
+		instanceType string
+		want         bool
+	}{
+		{"g5.xlarge", true},
+		{"g5.2xlarge", true},
+		{"g4dn.xlarge", true},
+		{"p3.2xlarge", true},
+		{"t3.large", false},
+		{"t3.xlarge", false},
+		{"m5.large", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.instanceType, func(t *testing.T) {
+			got := IsGPUInstance(tc.instanceType)
+			if got != tc.want {
+				t.Errorf("IsGPUInstance(%q) = %v, want %v", tc.instanceType, got, tc.want)
+			}
+		})
 	}
 }

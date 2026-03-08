@@ -63,3 +63,28 @@ func TestGenerate_UnsupportedRuntime(t *testing.T) {
 		t.Fatal("expected error for unsupported runtime, got nil")
 	}
 }
+
+func TestGenerate_GPUScript(t *testing.T) {
+	script, err := bootstrap.Generate(models.RuntimeOllama, "qwen3.5:4b", "sk-test", "CERT", "KEY", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, want := range []string{"nvidia-smi", "cuda-toolkit"} {
+		if !strings.Contains(script, want) {
+			t.Errorf("GPU script missing expected string %q", want)
+		}
+	}
+}
+
+func TestGenerate_CPUScript(t *testing.T) {
+	script, err := bootstrap.Generate(models.RuntimeOllama, "llama3.2:1b", "sk-test", "CERT", "KEY", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(script, `"false" = "true"`) {
+		t.Error("CPU script should have GPU conditional evaluate to false")
+	}
+	if strings.Contains(script, `"true" = "true"`) {
+		t.Error("CPU script should not have GPU conditional evaluate to true")
+	}
+}
