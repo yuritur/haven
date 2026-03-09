@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,7 +31,9 @@ func NewRootCmd() *cobra.Command {
 		Long: banner + "\n\n" +
 			"  Deploy LLM models to your cloud with one command.\n" +
 			"  Your data never leaves your infrastructure.",
-		Version: version,
+		Version:       version,
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 
 	root.PersistentFlags().StringVar(&providerName, "provider", "aws", "Cloud provider to use (aws)")
@@ -46,17 +49,19 @@ func NewRootCmd() *cobra.Command {
 
 func Execute() {
 	cmd := NewRootCmd()
-	cmd.SilenceErrors = true
 	if err := cmd.Execute(); err != nil {
+		if errors.Is(err, provider.ErrNoAccount) {
+			return
+		}
 		fmt.Fprintf(os.Stderr, "\033[31merror: %v\033[0m\n", err)
 		os.Exit(1)
 	}
 }
 
-func buildProviderAndStore(ctx context.Context, name string, out io.Writer) (provider.Provider, provider.StateStore, error) {
+func buildProvider(ctx context.Context, name string, p provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	switch name {
 	case "aws":
-		return awsprovider.New(ctx, out)
+		return awsprovider.Authenticate(ctx, p, out)
 	default:
 		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
 	}

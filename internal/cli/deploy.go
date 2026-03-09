@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -35,16 +34,21 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			if *verbose {
 				out = os.Stdout
 			}
-			prov, store, err := buildProviderAndStore(cmd.Context(), *providerName, out)
+			prompter := newTerminalPrompter()
+			prov, store, err := buildProvider(cmd.Context(), *providerName, prompter, out)
 			if err != nil {
 				return err
 			}
-			return runDeploy(cmd.Context(), prov, store, *providerName, args[0], *verbose, out)
+			promptFn := func(msg string) string {
+				fmt.Print(msg)
+				return prompter.Input("")
+			}
+			return runDeploy(cmd.Context(), prov, store, *providerName, args[0], *verbose, out, promptFn)
 		},
 	}
 }
 
-func runDeploy(ctx context.Context, prov provider.Provider, store provider.StateStore, providerName string, modelName string, verbose bool, out io.Writer) error {
+func runDeploy(ctx context.Context, prov provider.Provider, store provider.StateStore, providerName string, modelName string, verbose bool, out io.Writer, promptFn func(string) string) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
@@ -54,7 +58,6 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\033[33mProvider:\033[0m %s  \033[33mAccount:\033[0m %s  \033[33mRegion:\033[0m %s\n", providerName, identity.AccountID, identity.Region)
 
 	userIP, err := detectPublicIP()
 	if err != nil {
@@ -83,7 +86,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 	if ensurer, ok := prov.(interface {
 		EnsureQuota(ctx context.Context, instanceType string, promptFn func(string) string) error
 	}); ok {
-		if err := ensurer.EnsureQuota(ctx, modelCfg.InstanceType, stdinPrompt); err != nil {
+		if err := ensurer.EnsureQuota(ctx, modelCfg.InstanceType, promptFn); err != nil {
 			if errors.Is(err, provider.ErrQuotaUserExit) {
 				return nil
 			}
@@ -289,13 +292,4 @@ func generateDeploymentID() (string, error) {
 		return "", err
 	}
 	return "haven-" + hex.EncodeToString(b), nil
-}
-
-func stdinPrompt(prompt string) string {
-	fmt.Print(prompt)
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		return scanner.Text()
-	}
-	return ""
 }

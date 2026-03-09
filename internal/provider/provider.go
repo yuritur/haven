@@ -9,9 +9,19 @@ import (
 )
 
 var ErrQuotaUserExit = errors.New("quota: user chose manual resolution")
+var ErrNoAccount = errors.New("no cloud account")
+
+type Prompter interface {
+	Confirm(message string) bool
+	Input(prompt string) string
+	Secret(prompt string) string
+	Select(prompt string, options []string) int
+	Print(message string)
+}
 
 type Identity struct {
 	AccountID string
+	ARN       string
 	Region    string
 }
 

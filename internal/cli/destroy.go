@@ -23,7 +23,8 @@ func newDestroyCmd(providerName *string, verbose *bool) *cobra.Command {
 			if *verbose {
 				out = os.Stdout
 			}
-			prov, store, err := buildProviderAndStore(cmd.Context(), *providerName, out)
+			prompter := newTerminalPrompter()
+			prov, store, err := buildProvider(cmd.Context(), *providerName, prompter, out)
 			if err != nil {
 				return err
 			}

@@ -20,7 +20,8 @@ func newCertCmd(providerName *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&showFingerprint, "fingerprint", false, "Print SHA-256 fingerprint instead of PEM certificate")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, store, err := buildProviderAndStore(cmd.Context(), *providerName, io.Discard)
+		prompter := newTerminalPrompter()
+		_, store, err := buildProvider(cmd.Context(), *providerName, prompter, io.Discard)
 		if err != nil {
 			return err
 		}
