@@ -71,3 +71,14 @@ func (m *StateStore) Delete(ctx context.Context, id string) error {
 	}
 	return m.DeleteFn(ctx, id)
 }
+
+type QuotaEnsurer struct {
+	EnsureQuotaFn func(ctx context.Context, instanceType string, promptFn func(string) string) error
+}
+
+func (m *QuotaEnsurer) EnsureQuota(ctx context.Context, instanceType string, promptFn func(string) string) error {
+	if m.EnsureQuotaFn == nil {
+		return errors.New("mock: EnsureQuotaFn not configured")
+	}
+	return m.EnsureQuotaFn(ctx, instanceType, promptFn)
+}

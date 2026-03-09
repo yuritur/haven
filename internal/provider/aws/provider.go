@@ -8,12 +8,15 @@ import (
 
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/provider/aws/cfn"
+	"github.com/havenapp/haven/internal/provider/aws/quota"
 )
 
 type AWSProvider struct {
-	cfg      awssdk.Config
-	identity provider.Identity
-	out      io.Writer
+	cfg        awssdk.Config
+	identity   provider.Identity
+	bucketName string
+	quotaStore *quota.Store
+	out        io.Writer
 }
 
 var _ provider.Provider = (*AWSProvider)(nil)
@@ -34,14 +37,17 @@ func New(ctx context.Context, out io.Writer) (provider.Provider, provider.StateS
 		return nil, nil, err
 	}
 
-	return &AWSProvider{
-		cfg: cfg,
-		out: out,
+	p := &AWSProvider{
+		cfg:        cfg,
+		out:        out,
+		bucketName: store.bucketName,
+		quotaStore: quota.NewStore(cfg, store.bucketName),
 		identity: provider.Identity{
 			AccountID: id.AccountID,
 			Region:    id.Region,
 		},
-	}, store, nil
+	}
+	return p, store, nil
 }
 
 func (p *AWSProvider) Identity(_ context.Context) (provider.Identity, error) {

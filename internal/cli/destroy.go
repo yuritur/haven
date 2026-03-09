@@ -38,7 +38,7 @@ func runDestroy(ctx context.Context, prov provider.Provider, store provider.Stat
 		return err
 	}
 
-	fmt.Printf("Destroying %s (%s on %s)...\n\n", deployment.ID, deployment.Model, deployment.InstanceType)
+	fmt.Printf("\033[33mDestroying\033[0m %s (%s on %s)...\n\n", deployment.ID, deployment.Model, deployment.InstanceType)
 
 	var spin *tui.Spinner
 	if !verbose {

@@ -75,6 +75,21 @@ haven cert <deployment-id>
 haven destroy <deployment-id>
 ```
 
+## GPU models and vCPU quotas
+
+AWS accounts have **0 vCPU quota** for GPU instance families (G, P) by default. When you deploy a GPU model for the first time, Haven will detect this and offer to request a quota increase automatically via the AWS Service Quotas API.
+
+Small increases (e.g., 4 vCPUs for a single `g5.xlarge`) are typically auto-approved within a few minutes. Larger requests may take hours and require AWS support review.
+
+If you prefer to request the increase manually:
+
+```bash
+aws service-quotas request-service-quota-increase \
+  --service-code ec2 --quota-code L-DB2E81BA --desired-value 4
+```
+
+Or use the [AWS Console](https://console.aws.amazon.com/servicequotas/home#!/services/ec2/quotas/L-DB2E81BA).
+
 ## Use with OpenAI SDK
 
 ```python

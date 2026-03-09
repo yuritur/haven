@@ -34,7 +34,10 @@ func NewRootCmd() *cobra.Command {
 }
 
 func Execute() {
-	if err := NewRootCmd().Execute(); err != nil {
+	cmd := NewRootCmd()
+	cmd.SilenceErrors = true
+	if err := cmd.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "\033[31merror: %v\033[0m\n", err)
 		os.Exit(1)
 	}
 }
