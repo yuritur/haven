@@ -35,7 +35,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			if *verbose {
 				out = os.Stdout
 			}
-			prompter := &terminalPrompter{}
+			prompter := newTerminalPrompter()
 			prov, store, err := authenticateProvider(cmd.Context(), *providerName, prompter, out)
 			if err != nil {
 				return err
