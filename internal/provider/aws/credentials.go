@@ -11,6 +11,7 @@ import (
 
 type identity struct {
 	AccountID string
+	ARN       string
 	Region    string
 }
 
@@ -30,6 +31,7 @@ func getIdentity(ctx context.Context, cfg aws.Config) (identity, error) {
 	}
 	return identity{
 		AccountID: aws.ToString(out.Account),
+		ARN:       aws.ToString(out.Arn),
 		Region:    cfg.Region,
 	}, nil
 }

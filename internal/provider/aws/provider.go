@@ -44,6 +44,7 @@ func New(ctx context.Context, out io.Writer) (provider.Provider, provider.StateS
 		quotaStore: quota.NewStore(cfg, store.bucketName),
 		identity: provider.Identity{
 			AccountID: id.AccountID,
+			ARN:       id.ARN,
 			Region:    id.Region,
 		},
 	}
