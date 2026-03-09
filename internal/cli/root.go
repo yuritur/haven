@@ -12,14 +12,24 @@ import (
 	awsprovider "github.com/havenapp/haven/internal/provider/aws"
 )
 
+const banner = "\033[33m" +
+	" ██╗  ██╗ █████╗ ██╗   ██╗███████╗███╗   ██╗\n" +
+	" ██║  ██║██╔══██╗██║   ██║██╔════╝████╗  ██║\n" +
+	" ███████║███████║██║   ██║█████╗  ██╔██╗ ██║\n" +
+	" ██╔══██║██╔══██║╚██╗ ██╔╝██╔══╝  ██║╚██╗██║\n" +
+	" ██║  ██║██║  ██║ ╚████╔╝ ███████╗██║ ╚████║\n" +
+	" ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═══╝\033[0m"
+
 func NewRootCmd() *cobra.Command {
 	var providerName string
 	var verbose bool
 
 	root := &cobra.Command{
-		Use:     "haven",
-		Short:   "Deploy open-source LLM models to your own cloud",
-		Long:    "Haven deploys LLM models to your cloud with one command.\nYour data never leaves your infrastructure.",
+		Use:   "haven",
+		Short: "Deploy open-source LLM models to your own cloud",
+		Long: banner + "\n\n" +
+			"  Deploy LLM models to your cloud with one command.\n" +
+			"  Your data never leaves your infrastructure.",
 		Version: version,
 	}
 
