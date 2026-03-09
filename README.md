@@ -27,7 +27,6 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 ## Supported models
 
-
 | Model         | GPU         | ~$/hr |
 | ------------- | ----------- | ----- |
 | `llama3.2:1b` | —           | $0.08 |
@@ -37,7 +36,6 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 | `qwen3.5:9b`  | NVIDIA A10G | $1.01 |
 | `qwen3.5:27b` | NVIDIA A10G | $1.21 |
 
-
 *Prices are approximate AWS on-demand rates for us-east-1.*
 
 ## Install
@@ -46,18 +44,6 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 ```bash
 brew install yuritur/tap/haven
-```
-
-### macOS / Linux (script) (Not tested yet)
-
-```bash
-curl -sSL https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.sh | sh
-```
-
-### Windows (PowerShell) (Not tested yet)
-
-```powershell
-irm https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.ps1 | iex
 ```
 
 ### From source
@@ -77,6 +63,9 @@ haven deploy llama3.2:1b
 # List deployments
 haven status
 
+# Show TLS fingerprint
+haven cert <deployment-id>
+
 # Tear down
 haven destroy <deployment-id>
 ```
@@ -92,7 +81,7 @@ If you prefer, use the [AWS Console](https://console.aws.amazon.com/servicequota
 ## Use with curl (as proof of work)
 
 ```bash
-curl -k --cacert data/certs/<deployment-id>.pem \
+curl --cacert data/certs/<deployment-id>.pem \
   https://<ip>:11434/v1/chat/completions \
   -H "Authorization: Bearer sk-haven-..." \
   -H "Content-Type: application/json" \
