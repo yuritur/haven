@@ -98,7 +98,7 @@ func (p *AWSProvider) handleInsufficientQuota(ctx context.Context, status *quota
 
 	fmt.Println()
 	fmt.Println("  [1] I'll request the increase myself")
-	fmt.Println("  [2] Let Haven request it (may take several minutes)")
+	fmt.Println("  [2] Let Haven request it (may take minutes to hours)")
 
 	choice := promptFn("\n\033[33mChoice [1/2]:\033[0m ")
 	choice = strings.TrimSpace(choice)
@@ -142,6 +142,7 @@ func (p *AWSProvider) submitAndWait(ctx context.Context, instanceType string, qu
 }
 
 func (p *AWSProvider) waitForQuotaApproval(ctx context.Context, requestID string, quotaCode string) error {
+	fmt.Println("This may take a while. You can press Ctrl+C and run `haven deploy` later — the request is saved.")
 	spin := tui.StartSpinner("Waiting for quota approval...")
 	defer spin.Stop()
 
