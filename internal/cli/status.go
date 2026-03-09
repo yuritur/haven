@@ -36,8 +36,8 @@ func runStatus(ctx context.Context, store provider.StateStore) error {
 		return nil
 	}
 
-	fmt.Printf("%-20s  %-6s  %-14s  %-12s  %s\n", "ID", "CLOUD", "MODEL", "INSTANCE", "ENDPOINT")
-	fmt.Printf("%-20s  %-6s  %-14s  %-12s  %s\n", "--------------------", "------", "--------------", "------------", "--------")
+	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %s\033[0m\n", "ID", "CLOUD", "MODEL", "INSTANCE", "ENDPOINT")
+	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %s\033[0m\n", "--------------------", "------", "--------------", "------------", "--------")
 	for _, d := range deployments {
 		fmt.Printf("%-20s  %-6s  %-14s  %-12s  %s\n", d.ID, d.Provider, d.Model, d.InstanceType, d.Endpoint)
 	}
