@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -30,7 +31,9 @@ func NewRootCmd() *cobra.Command {
 		Long: banner + "\n\n" +
 			"  Deploy LLM models to your cloud with one command.\n" +
 			"  Your data never leaves your infrastructure.",
-		Version: version,
+		Version:       version,
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 
 	root.PersistentFlags().StringVar(&providerName, "provider", "aws", "Cloud provider to use (aws)")
@@ -46,9 +49,12 @@ func NewRootCmd() *cobra.Command {
 
 func Execute() {
 	cmd := NewRootCmd()
-	cmd.SilenceErrors = true
 	if err := cmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "\033[31merror: %v\033[0m\n", err)
+		if errors.Is(err, provider.ErrNoAccount) {
+			return
+		}
+		fmt.Fprintf(os.Stderr, "\x1b[31merror: %v\x1b[0m\n", err)
+		os.Stderr.Sync()
 		os.Exit(1)
 	}
 }

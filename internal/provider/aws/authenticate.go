@@ -119,7 +119,10 @@ func onboard(ctx context.Context, p provider.Prompter) (*probeResult, error) {
 	p.Print("\nNo AWS credentials found.\n")
 
 	if !p.Confirm("Do you have an AWS account?") {
-		return nil, fmt.Errorf("no AWS account — create one at https://aws.amazon.com/free/ and run haven again")
+		p.Print("\n\033[33mCreate a free AWS account first:\033[0m")
+		p.Print("  https://aws.amazon.com/free/")
+		p.Print("\n\033[33mThen run haven again.\033[0m")
+		return nil, provider.ErrNoAccount
 	}
 
 	return collectAndProbe(ctx, p)

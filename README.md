@@ -27,14 +27,16 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 ## Supported models
 
-| Model | GPU | ~$/hr |
-|---|---|---|
-| `llama3.2:1b` | — | $0.08 |
-| `llama3.2:3b` | — | $0.17 |
-| `phi3:mini` | — | $0.08 |
-| `qwen3.5:4b` | NVIDIA A10G | $1.01 |
-| `qwen3.5:9b` | NVIDIA A10G | $1.01 |
+
+| Model         | GPU         | ~$/hr |
+| ------------- | ----------- | ----- |
+| `llama3.2:1b` | —           | $0.08 |
+| `llama3.2:3b` | —           | $0.17 |
+| `phi3:mini`   | —           | $0.08 |
+| `qwen3.5:4b`  | NVIDIA A10G | $1.01 |
+| `qwen3.5:9b`  | NVIDIA A10G | $1.01 |
 | `qwen3.5:27b` | NVIDIA A10G | $1.21 |
+
 
 *Prices are approximate AWS on-demand rates for us-east-1.*
 
@@ -46,13 +48,13 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 brew install yuritur/tap/haven
 ```
 
-### macOS / Linux (script)
+### macOS / Linux (script) (Not tested yet)
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.sh | sh
 ```
 
-### Windows (PowerShell)
+### Windows (PowerShell) (Not tested yet)
 
 ```powershell
 irm https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.ps1 | iex
@@ -66,18 +68,7 @@ go install github.com/havenapp/haven/cmd/haven@latest
 
 ## Usage
 
-> **Note:** Currently only AWS is supported as a cloud provider. You need an AWS account with credentials configured in your terminal:
->
-> ```bash
-> # Option 1: default profile
-> aws configure
->
-> # Option 2: named profile
-> export AWS_PROFILE=my-profile
->
-> # Option 3: explicit default profile
-> export AWS_DEFAULT_PROFILE=my-profile
-> ```
+> **Note:** Currently only AWS is supported as a cloud provider. No prior AWS CLI setup is required — Haven will guide you through creating an account and configuring credentials if needed.
 
 ```bash
 # Deploy a model
@@ -85,9 +76,6 @@ haven deploy llama3.2:1b
 
 # List deployments
 haven status
-
-# Show TLS fingerprint
-haven cert <deployment-id>
 
 # Tear down
 haven destroy <deployment-id>
@@ -99,14 +87,17 @@ AWS accounts have **0 vCPU quota** for GPU instance families (G, P) by default. 
 
 Small increases (e.g., 4 vCPUs for a single `g5.xlarge`) are typically auto-approved within a few minutes. Larger requests may take hours and require AWS support review.
 
-If you prefer to request the increase manually:
+If you prefer, use the [AWS Console](https://console.aws.amazon.com/servicequotas/home#!/services/ec2/quotas/L-DB2E81BA) to make the request.
+
+## Use with curl (as proof of work)
 
 ```bash
-aws service-quotas request-service-quota-increase \
-  --service-code ec2 --quota-code L-DB2E81BA --desired-value 4
+curl -k --cacert data/certs/<deployment-id>.pem \
+  https://<ip>:11434/v1/chat/completions \
+  -H "Authorization: Bearer sk-haven-..." \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama3.2:1b","messages":[{"role":"user","content":"Hello!"}]}'
 ```
-
-Or use the [AWS Console](https://console.aws.amazon.com/servicequotas/home#!/services/ec2/quotas/L-DB2E81BA).
 
 ## Use with OpenAI SDK
 

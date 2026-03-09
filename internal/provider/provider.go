@@ -9,6 +9,7 @@ import (
 )
 
 var ErrQuotaUserExit = errors.New("quota: user chose manual resolution")
+var ErrNoAccount = errors.New("no AWS account")
 
 type Prompter interface {
 	Confirm(message string) bool
