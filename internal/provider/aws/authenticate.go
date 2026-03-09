@@ -129,33 +129,39 @@ func onboard(ctx context.Context, p provider.Prompter) (*probeResult, error) {
 }
 
 func collectAndProbe(ctx context.Context, p provider.Prompter) (*probeResult, error) {
-	accessKey, secretKey, region, err := collectCredentials(p)
-	if err != nil {
-		return nil, err
+	var cfg awssdk.Config
+	var id identity
+
+	for attempt := range 3 {
+		accessKey, secretKey, region, err := collectCredentials(p)
+		if err != nil {
+			return nil, err
+		}
+
+		cfg, err = loadConfigWithStaticCredentials(ctx, accessKey, secretKey, region)
+		if err == nil {
+			id, err = getIdentity(ctx, cfg)
+		}
+		if err == nil {
+			if err := saveCredentials(accessKey, secretKey, region); err != nil {
+				return nil, err
+			}
+			return &probeResult{
+				cfg: cfg,
+				identity: provider.Identity{
+					AccountID: id.AccountID,
+					ARN:       id.ARN,
+					Region:    id.Region,
+				},
+			}, nil
+		}
+
+		if attempt < 2 {
+			p.Print("\nInvalid credentials, please try again.\n")
+		}
 	}
 
-	// Validate credentials before saving.
-	cfg, err := loadConfigWithStaticCredentials(ctx, accessKey, secretKey, region)
-	if err != nil {
-		return nil, err
-	}
-	id, err := getIdentity(ctx, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("invalid credentials: %w", err)
-	}
-
-	if err := saveCredentials(accessKey, secretKey, region); err != nil {
-		return nil, err
-	}
-
-	return &probeResult{
-		cfg: cfg,
-		identity: provider.Identity{
-			AccountID: id.AccountID,
-			ARN:       id.ARN,
-			Region:    id.Region,
-		},
-	}, nil
+	return nil, fmt.Errorf("invalid credentials: maximum attempts exceeded")
 }
 
 func collectCredentials(p provider.Prompter) (accessKey, secretKey, region string, err error) {
