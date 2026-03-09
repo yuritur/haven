@@ -73,5 +73,9 @@ func ResumeSession(ctx context.Context, out io.Writer) (provider.Provider, provi
 		return nil, nil, fmt.Errorf("session expired or invalid. Run: haven login")
 	}
 
+	if ar.identity.AccountID != sess.AccountID {
+		return nil, nil, fmt.Errorf("session account mismatch (expected %s, got %s). Run: haven login", sess.AccountID, ar.identity.AccountID)
+	}
+
 	return initFromResult(ctx, ar, out)
 }

@@ -22,8 +22,6 @@ type authResult struct {
 	profile  string
 }
 
-// Authenticate runs the full interactive AWS authentication flow.
-// It returns a ready-to-use Provider and StateStore, or an error.
 func Login(ctx context.Context, prompter provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	ar, err := detectCredentials(ctx)
 	if err != nil {
@@ -43,27 +41,6 @@ func Login(ctx context.Context, prompter provider.Prompter, out io.Writer) (prov
 		return nil, nil, err
 	}
 	return loginAndSave(ctx, ar, out)
-}
-
-func Authenticate(ctx context.Context, prompter provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
-	ar, err := detectCredentials(ctx)
-	if err != nil {
-		ar, err = onboard(ctx, prompter)
-		if err != nil {
-			return nil, nil, err
-		}
-		return initFromResult(ctx, ar, out)
-	}
-
-	if confirmIdentity(prompter, ar.identity) {
-		return initFromResult(ctx, ar, out)
-	}
-
-	ar, err = switchProfile(ctx, prompter)
-	if err != nil {
-		return nil, nil, err
-	}
-	return initFromResult(ctx, ar, out)
 }
 
 func detectCredentials(ctx context.Context) (*authResult, error) {
