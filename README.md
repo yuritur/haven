@@ -4,9 +4,7 @@
 
 Deploy open-source LLMs to your own cloud with one command. No middlemen, no additional fees, no data leaks. Just your machine, your cloud, your models.
 
-```bash
-haven deploy llama3.2:1b
-```
+![Haven deploy demo](data/haven-demo.gif)
 
 ## Motivation
 
