@@ -70,6 +70,18 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		return fmt.Errorf("generate deployment ID: %w", err)
 	}
 
+	if models.IsGPUInstance(modelCfg.InstanceType) {
+		if checker, ok := prov.(gpuQuotaChecker); ok {
+			result, err := handleGPUQuota(ctx, checker, modelCfg.InstanceType, identity.Region, stdinPrompt)
+			if err != nil {
+				return err
+			}
+			if !result.Proceed {
+				return nil
+			}
+		}
+	}
+
 	fmt.Printf("Deploying %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
 
 	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
