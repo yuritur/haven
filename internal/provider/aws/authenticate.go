@@ -19,10 +19,32 @@ import (
 type authResult struct {
 	cfg      awssdk.Config
 	identity provider.Identity
+	profile  string
 }
 
 // Authenticate runs the full interactive AWS authentication flow.
 // It returns a ready-to-use Provider and StateStore, or an error.
+func Login(ctx context.Context, prompter provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
+	ar, err := detectCredentials(ctx)
+	if err != nil {
+		ar, err = onboard(ctx, prompter)
+		if err != nil {
+			return nil, nil, err
+		}
+		return loginAndSave(ctx, ar, out)
+	}
+
+	if confirmIdentity(prompter, ar.identity) {
+		return loginAndSave(ctx, ar, out)
+	}
+
+	ar, err = switchProfile(ctx, prompter)
+	if err != nil {
+		return nil, nil, err
+	}
+	return loginAndSave(ctx, ar, out)
+}
+
 func Authenticate(ctx context.Context, prompter provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	ar, err := detectCredentials(ctx)
 	if err != nil {
@@ -61,7 +83,12 @@ func resolveDefault(ctx context.Context) (*authResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	return verifyIdentity(ctx, cfg)
+	ar, err := verifyIdentity(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	ar.profile = ""
+	return ar, nil
 }
 
 func resolveProfile(ctx context.Context, profile string) (*authResult, error) {
@@ -69,7 +96,12 @@ func resolveProfile(ctx context.Context, profile string) (*authResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	return verifyIdentity(ctx, cfg)
+	ar, err := verifyIdentity(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	ar.profile = profile
+	return ar, nil
 }
 
 func verifyIdentity(ctx context.Context, cfg awssdk.Config) (*authResult, error) {
@@ -160,6 +192,7 @@ func collectAndResolve(ctx context.Context, p provider.Prompter) (*authResult, e
 					ARN:       id.ARN,
 					Region:    id.Region,
 				},
+				profile: "haven",
 			}, nil
 		}
 
@@ -321,6 +354,18 @@ func parseINISections(path string) []string {
 		}
 	}
 	return sections
+}
+
+func loginAndSave(ctx context.Context, ar *authResult, out io.Writer) (provider.Provider, provider.StateStore, error) {
+	if err := SaveSession(Session{
+		Provider:  "aws",
+		Profile:   ar.profile,
+		AccountID: ar.identity.AccountID,
+		Region:    ar.identity.Region,
+	}); err != nil {
+		return nil, nil, fmt.Errorf("save session: %w", err)
+	}
+	return initFromResult(ctx, ar, out)
 }
 
 func initFromResult(ctx context.Context, pr *authResult, out io.Writer) (provider.Provider, provider.StateStore, error) {

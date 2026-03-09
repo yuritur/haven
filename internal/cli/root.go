@@ -39,6 +39,7 @@ func NewRootCmd() *cobra.Command {
 	root.PersistentFlags().StringVar(&providerName, "provider", "aws", "Cloud provider to use (aws)")
 	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show detailed provider resource events")
 
+	root.AddCommand(newLoginCmd(&providerName))
 	root.AddCommand(newDeployCmd(&providerName, &verbose))
 	root.AddCommand(newDestroyCmd(&providerName, &verbose))
 	root.AddCommand(newStatusCmd(&providerName))
@@ -59,10 +60,10 @@ func Execute() {
 	}
 }
 
-func buildProvider(ctx context.Context, name string, p provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
+func buildProvider(ctx context.Context, name string, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	switch name {
 	case "aws":
-		return awsprovider.Authenticate(ctx, p, out)
+		return awsprovider.ResumeSession(ctx, out)
 	default:
 		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
 	}

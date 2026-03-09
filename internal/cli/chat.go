@@ -43,7 +43,7 @@ func newChatCmd(providerName *string) *cobra.Command {
 	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		prompter := newTerminalPrompter()
-		_, store, err := buildProvider(cmd.Context(), *providerName, prompter, io.Discard)
+		_, store, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 		if err != nil {
 			return err
 		}
