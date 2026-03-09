@@ -62,7 +62,7 @@ func runChat(ctx context.Context, store provider.StateStore, prompter provider.P
 	}
 
 	client := &http.Client{
-		Timeout:   0,
+		Timeout:   0, // streaming responses can take arbitrarily long
 		Transport: certutil.NewPinnedTransport(d.TLSFingerprint),
 	}
 
@@ -163,7 +163,7 @@ func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
 
