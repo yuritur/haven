@@ -22,7 +22,7 @@ func newLoginCmd(providerName *string) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				fmt.Println("\nLogged in successfully.")
+				fmt.Println("\n\033[33mLogged in successfully.\033[0m")
 				return nil
 			default:
 				return fmt.Errorf("unknown provider %q", *providerName)
