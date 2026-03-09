@@ -38,9 +38,9 @@ The CLI provides a `Prompter` interface for terminal I/O, keeping the provider t
 ## What works
 
 - `go build ./cmd/haven/` — compiles
-- `go test -race ./...` — 7/7 packages pass
+- `go test -race ./...` — 8/8 packages pass (including new authenticate_test.go)
 - `go vet ./...` — clean
-- `golangci-lint run` — no new issues
+- `golangci-lint run` — no new issues from this iteration
 
 Auth flows:
 - Existing credentials: shows identity (account, region, ARN), asks Y/n
@@ -48,15 +48,20 @@ Auth flows:
 - New user onboarding: guides to IAM console, collects keys, validates via STS, saves to [haven] profile
 - Fallback: tries [haven] profile when default credentials fail
 - Read-only commands (status, cert) bypass interactive auth
+- Retry loop: up to 3 attempts for invalid credentials during onboarding/manual entry
+
+Unit tests (16 cases in authenticate_test.go):
+- `TestUpsertINISection` — 5 cases: new file, append, replace, preserve others, profile-style sections
+- `TestParseINISections` — 4 cases: missing file, single, multiple, non-section lines
+- `TestCollectCredentials` — 5 cases: valid input, default region, empty key/secret errors
+- `TestConfirmIdentity` — 2 cases: confirm/decline, verifies identity values are printed
 
 ## What's not covered
 
-- Unit tests for authenticate.go and prompt.go (mock Prompter is ready, tests are a fast follow)
-- Retry loop for invalid credentials during onboarding
-- Confirmation before saving credentials to disk
+- Unit tests for `Authenticate` orchestration (requires AWS SDK dependency injection)
+- Unit tests for retry loop in `collectAndProbe` (same reason — calls real `loadConfigWithStaticCredentials`/`getIdentity`)
+- Confirmation before saving credentials to disk (decided against — unnecessary friction)
 
 ## What's left
 
-- Add unit tests for auth flow (upsertINISection, listProfiles, Authenticate orchestration)
-- Consider adding "Save credentials?" confirmation before writing to ~/.aws/credentials
-- Consider retry loop (2-3 attempts) for credential validation failures
+- Consider extracting AWS SDK calls behind interfaces for deeper unit testing of `Authenticate` and `collectAndProbe`

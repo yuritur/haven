@@ -3,6 +3,7 @@ package aws
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/havenapp/haven/internal/provider"
@@ -262,9 +263,15 @@ func TestConfirmIdentity(t *testing.T) {
 				t.Errorf("confirmIdentity() = %v, want %v", got, tt.want)
 			}
 
-			// Verify identity info was printed.
-			if len(printed) < 3 {
-				t.Fatalf("expected at least 3 print calls, got %d", len(printed))
+			all := strings.Join(printed, "\n")
+			if !strings.Contains(all, id.AccountID) {
+				t.Errorf("printed output missing account ID %q", id.AccountID)
+			}
+			if !strings.Contains(all, id.Region) {
+				t.Errorf("printed output missing region %q", id.Region)
+			}
+			if !strings.Contains(all, id.ARN) {
+				t.Errorf("printed output missing ARN %q", id.ARN)
 			}
 		})
 	}
