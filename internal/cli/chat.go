@@ -16,6 +16,7 @@ import (
 
 	"github.com/havenapp/haven/internal/certutil"
 	"github.com/havenapp/haven/internal/provider"
+	"github.com/havenapp/haven/internal/tui"
 )
 
 type chatMessage struct {
@@ -156,23 +157,33 @@ func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+d.APIKey)
 
+	spin := tui.StartSpinner("\033[33mThinking...\033[0m")
+
 	resp, err := client.Do(req)
 	if err != nil {
+		spin.Stop()
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		spin.Stop()
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
-
 	var full strings.Builder
+	first := true
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
 		var chunk chatStreamResponse
 		if err := json.Unmarshal(scanner.Bytes(), &chunk); err != nil {
+			spin.Stop()
 			return "", fmt.Errorf("decode stream: %w", err)
+		}
+		if first {
+			spin.Stop()
+			fmt.Print("\033[36m")
+			first = false
 		}
 		if chunk.Done {
 			break
@@ -183,6 +194,7 @@ func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment
 	if err := scanner.Err(); err != nil {
 		return "", err
 	}
+	fmt.Print("\033[0m")
 	fmt.Println()
 
 	return full.String(), nil
