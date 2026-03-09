@@ -1,4 +1,4 @@
-
+<p align="center"><img src="data/haven.png" alt="Haven" width="100%"></p>
 
 # Haven
 
