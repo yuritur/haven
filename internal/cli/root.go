@@ -66,12 +66,3 @@ func authenticateProvider(ctx context.Context, name string, p provider.Prompter,
 		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
 	}
 }
-
-func buildProviderAndStore(ctx context.Context, name string, out io.Writer) (provider.Provider, provider.StateStore, error) {
-	switch name {
-	case "aws":
-		return awsprovider.New(ctx, out)
-	default:
-		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
-	}
-}

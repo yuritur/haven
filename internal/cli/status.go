@@ -16,7 +16,8 @@ func newStatusCmd(providerName *string) *cobra.Command {
 		Short: "List active deployments",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, store, err := buildProviderAndStore(cmd.Context(), *providerName, io.Discard)
+			prompter := newTerminalPrompter()
+			_, store, err := authenticateProvider(cmd.Context(), *providerName, prompter, io.Discard)
 			if err != nil {
 				return err
 			}
