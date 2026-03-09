@@ -91,7 +91,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		}
 	}
 
-	fmt.Printf("Deploying %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
+	fmt.Printf("\033[33mDeploying\033[0m %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
 
 	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
