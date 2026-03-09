@@ -55,6 +55,11 @@ func Execute() {
 		if errors.Is(err, provider.ErrNoAccount) {
 			return
 		}
+		if errors.Is(err, provider.ErrNotLoggedIn) {
+			fmt.Fprintf(os.Stderr, "\033[31m%v\033[0m\n", err)
+			fmt.Fprintf(os.Stderr, "\n  Run: \033[33mhaven login\033[0m\n")
+			os.Exit(1)
+		}
 		fmt.Fprintf(os.Stderr, "\033[31merror: %v\033[0m\n", err)
 		os.Exit(1)
 	}

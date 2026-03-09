@@ -60,7 +60,7 @@ func LoadSession() (*Session, error) {
 func ResumeSession(ctx context.Context, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	sess, err := LoadSession()
 	if err != nil {
-		return nil, nil, fmt.Errorf("not logged in. Run: haven login")
+		return nil, nil, provider.ErrNotLoggedIn
 	}
 
 	var ar *authResult
@@ -70,11 +70,11 @@ func ResumeSession(ctx context.Context, out io.Writer) (provider.Provider, provi
 		ar, err = resolveProfile(ctx, sess.Profile)
 	}
 	if err != nil {
-		return nil, nil, fmt.Errorf("session expired or invalid. Run: haven login")
+		return nil, nil, fmt.Errorf("%w: session expired or credentials invalid", provider.ErrNotLoggedIn)
 	}
 
 	if ar.identity.AccountID != sess.AccountID {
-		return nil, nil, fmt.Errorf("session account mismatch (expected %s, got %s). Run: haven login", sess.AccountID, ar.identity.AccountID)
+		return nil, nil, fmt.Errorf("%w: account changed (expected %s, got %s)", provider.ErrNotLoggedIn, sess.AccountID, ar.identity.AccountID)
 	}
 
 	return initFromResult(ctx, ar, out)

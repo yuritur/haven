@@ -28,7 +28,12 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 		Use:     "deploy <model>",
 		Short:   "Deploy a model to your cloud",
 		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --provider aws",
-		Args:    cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("missing model name\n\n  Usage: haven deploy <model>\n  Example: haven deploy llama3.2:1b")
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var out io.Writer = io.Discard
 			if *verbose {

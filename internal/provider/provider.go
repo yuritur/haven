@@ -10,6 +10,7 @@ import (
 
 var ErrQuotaUserExit = errors.New("quota: user chose manual resolution")
 var ErrNoAccount = errors.New("no cloud account")
+var ErrNotLoggedIn = errors.New("not logged in")
 
 type Prompter interface {
 	Confirm(message string) bool
