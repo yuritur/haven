@@ -5,7 +5,6 @@ import (
 	"errors"
 
 	"github.com/havenapp/haven/internal/provider"
-	"github.com/havenapp/haven/internal/provider/aws/quota"
 )
 
 var _ provider.Provider = (*Provider)(nil)
@@ -73,45 +72,13 @@ func (m *StateStore) Delete(ctx context.Context, id string) error {
 	return m.DeleteFn(ctx, id)
 }
 
-type QuotaChecker struct {
-	CheckGPUQuotaFn            func(ctx context.Context, instanceType string) (*quota.QuotaStatus, error)
-	RequestGPUQuotaFn          func(ctx context.Context, instanceType string) (*quota.QuotaRequest, error)
-	LoadGPUQuotaRequestFn      func(ctx context.Context, quotaCode string) (*quota.QuotaRequest, error)
-	GetGPUQuotaRequestStatusFn func(ctx context.Context, requestID string) (string, error)
-	DeleteGPUQuotaRequestFn    func(ctx context.Context, quotaCode string) error
+type QuotaEnsurer struct {
+	EnsureQuotaFn func(ctx context.Context, instanceType string, promptFn func(string) string) error
 }
 
-func (m *QuotaChecker) CheckGPUQuota(ctx context.Context, instanceType string) (*quota.QuotaStatus, error) {
-	if m.CheckGPUQuotaFn == nil {
-		return nil, errors.New("mock: CheckGPUQuotaFn not configured")
+func (m *QuotaEnsurer) EnsureQuota(ctx context.Context, instanceType string, promptFn func(string) string) error {
+	if m.EnsureQuotaFn == nil {
+		return errors.New("mock: EnsureQuotaFn not configured")
 	}
-	return m.CheckGPUQuotaFn(ctx, instanceType)
-}
-
-func (m *QuotaChecker) RequestGPUQuota(ctx context.Context, instanceType string) (*quota.QuotaRequest, error) {
-	if m.RequestGPUQuotaFn == nil {
-		return nil, errors.New("mock: RequestGPUQuotaFn not configured")
-	}
-	return m.RequestGPUQuotaFn(ctx, instanceType)
-}
-
-func (m *QuotaChecker) LoadGPUQuotaRequest(ctx context.Context, quotaCode string) (*quota.QuotaRequest, error) {
-	if m.LoadGPUQuotaRequestFn == nil {
-		return nil, errors.New("mock: LoadGPUQuotaRequestFn not configured")
-	}
-	return m.LoadGPUQuotaRequestFn(ctx, quotaCode)
-}
-
-func (m *QuotaChecker) GetGPUQuotaRequestStatus(ctx context.Context, requestID string) (string, error) {
-	if m.GetGPUQuotaRequestStatusFn == nil {
-		return "", errors.New("mock: GetGPUQuotaRequestStatusFn not configured")
-	}
-	return m.GetGPUQuotaRequestStatusFn(ctx, requestID)
-}
-
-func (m *QuotaChecker) DeleteGPUQuotaRequest(ctx context.Context, quotaCode string) error {
-	if m.DeleteGPUQuotaRequestFn == nil {
-		return errors.New("mock: DeleteGPUQuotaRequestFn not configured")
-	}
-	return m.DeleteGPUQuotaRequestFn(ctx, quotaCode)
+	return m.EnsureQuotaFn(ctx, instanceType, promptFn)
 }

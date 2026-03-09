@@ -2,10 +2,13 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/havenapp/haven/internal/models"
 )
+
+var ErrQuotaUserExit = errors.New("quota: user chose manual resolution")
 
 type Identity struct {
 	AccountID string

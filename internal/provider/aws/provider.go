@@ -2,7 +2,6 @@ package aws
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
@@ -80,40 +79,4 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 
 func (p *AWSProvider) Destroy(ctx context.Context, providerRef string) error {
 	return cfn.Destroy(ctx, p.cfg, providerRef, p.out)
-}
-
-func (p *AWSProvider) CheckGPUQuota(ctx context.Context, instanceType string) (*quota.QuotaStatus, error) {
-	return quota.CheckQuota(ctx, p.cfg, instanceType)
-}
-
-func (p *AWSProvider) RequestGPUQuota(ctx context.Context, instanceType string) (*quota.QuotaRequest, error) {
-	quotaCode, err := quota.QuotaCodeForInstance(instanceType)
-	if err != nil {
-		return nil, err
-	}
-	vcpus, err := quota.VCPUsForInstance(instanceType)
-	if err != nil {
-		return nil, err
-	}
-	req, err := quota.RequestIncrease(ctx, p.cfg, quotaCode, float64(vcpus))
-	if err != nil {
-		return nil, err
-	}
-	req.InstanceType = instanceType
-	if err := p.quotaStore.Save(ctx, *req); err != nil {
-		return nil, fmt.Errorf("save quota request: %w", err)
-	}
-	return req, nil
-}
-
-func (p *AWSProvider) LoadGPUQuotaRequest(ctx context.Context, quotaCode string) (*quota.QuotaRequest, error) {
-	return p.quotaStore.Load(ctx, quotaCode)
-}
-
-func (p *AWSProvider) GetGPUQuotaRequestStatus(ctx context.Context, requestID string) (string, error) {
-	return quota.GetRequestStatus(ctx, p.cfg, requestID)
-}
-
-func (p *AWSProvider) DeleteGPUQuotaRequest(ctx context.Context, quotaCode string) error {
-	return p.quotaStore.Delete(ctx, quotaCode)
 }

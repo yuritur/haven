@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -70,15 +72,14 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		return fmt.Errorf("generate deployment ID: %w", err)
 	}
 
-	if models.IsGPUInstance(modelCfg.InstanceType) {
-		if checker, ok := prov.(gpuQuotaChecker); ok {
-			result, err := handleGPUQuota(ctx, checker, modelCfg.InstanceType, identity.Region, stdinPrompt)
-			if err != nil {
-				return err
-			}
-			if !result.Proceed {
+	if ensurer, ok := prov.(interface {
+		EnsureQuota(ctx context.Context, instanceType string, promptFn func(string) string) error
+	}); ok {
+		if err := ensurer.EnsureQuota(ctx, modelCfg.InstanceType, stdinPrompt); err != nil {
+			if errors.Is(err, provider.ErrQuotaUserExit) {
 				return nil
 			}
+			return err
 		}
 	}
 
@@ -280,4 +281,13 @@ func generateDeploymentID() (string, error) {
 		return "", err
 	}
 	return "haven-" + hex.EncodeToString(b), nil
+}
+
+func stdinPrompt(prompt string) string {
+	fmt.Print(prompt)
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		return scanner.Text()
+	}
+	return ""
 }
