@@ -57,8 +57,14 @@ go install github.com/havenapp/haven/cmd/haven@latest
 > **Note:** Currently only AWS is supported as a cloud provider. No prior AWS CLI setup is required — Haven will guide you through creating an account and configuring credentials if needed.
 
 ```bash
+# Authenticate with your cloud provider (once)
+haven login
+
 # Deploy a model
 haven deploy llama3.2:1b
+
+# Chat with your model
+haven chat
 
 # List deployments
 haven status
