@@ -44,7 +44,19 @@ func Authenticate(ctx context.Context, prompter provider.Prompter, out io.Writer
 }
 
 func probe(ctx context.Context) (*probeResult, error) {
-	cfg, err := loadConfig(ctx)
+	pr, err := probeWithConfig(ctx, loadConfig)
+	if err != nil {
+		// Fallback: try the "haven" profile (saved by previous onboarding).
+		if fallback, ferr := probeWithProfile(ctx, "haven"); ferr == nil {
+			return fallback, nil
+		}
+		return nil, err
+	}
+	return pr, nil
+}
+
+func probeWithConfig(ctx context.Context, loadFn func(context.Context) (awssdk.Config, error)) (*probeResult, error) {
+	cfg, err := loadFn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -63,22 +75,9 @@ func probe(ctx context.Context) (*probeResult, error) {
 }
 
 func probeWithProfile(ctx context.Context, profile string) (*probeResult, error) {
-	cfg, err := loadConfigWithProfile(ctx, profile)
-	if err != nil {
-		return nil, err
-	}
-	id, err := getIdentity(ctx, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &probeResult{
-		cfg: cfg,
-		identity: provider.Identity{
-			AccountID: id.AccountID,
-			ARN:       id.ARN,
-			Region:    id.Region,
-		},
-	}, nil
+	return probeWithConfig(ctx, func(ctx context.Context) (awssdk.Config, error) {
+		return loadConfigWithProfile(ctx, profile)
+	})
 }
 
 func confirmIdentity(p provider.Prompter, id provider.Identity) bool {
@@ -99,6 +98,9 @@ func switchProfile(ctx context.Context, p provider.Prompter) (*probeResult, erro
 	options[len(profiles)] = "Enter new credentials"
 
 	idx := p.Select("Available AWS profiles:", options)
+	if idx < 0 || idx >= len(options) {
+		return nil, fmt.Errorf("selection cancelled")
+	}
 	if idx == len(profiles) {
 		return collectAndProbe(ctx, p)
 	}
@@ -106,6 +108,9 @@ func switchProfile(ctx context.Context, p provider.Prompter) (*probeResult, erro
 	pr, err := probeWithProfile(ctx, profiles[idx])
 	if err != nil {
 		return nil, fmt.Errorf("profile %q: %w", profiles[idx], err)
+	}
+	if !confirmIdentity(p, pr.identity) {
+		return nil, fmt.Errorf("aborted")
 	}
 	return pr, nil
 }
@@ -157,17 +162,17 @@ func collectCredentials(p provider.Prompter) (accessKey, secretKey, region strin
 	p.Print("  3. Click \"Create access key\"")
 	p.Print("  4. Copy the Access Key ID and Secret Access Key\n")
 
-	accessKey = p.Input("AWS Access Key ID")
+	accessKey = strings.TrimSpace(p.Input("AWS Access Key ID"))
 	if accessKey == "" {
 		return "", "", "", fmt.Errorf("access key ID is required")
 	}
 
-	secretKey = p.Secret("Secret Access Key")
+	secretKey = strings.TrimSpace(p.Secret("Secret Access Key"))
 	if secretKey == "" {
 		return "", "", "", fmt.Errorf("secret access key is required")
 	}
 
-	region = p.Input("Region [us-east-1]")
+	region = strings.TrimSpace(p.Input("Region [us-east-1]"))
 	if region == "" {
 		region = "us-east-1"
 	}
