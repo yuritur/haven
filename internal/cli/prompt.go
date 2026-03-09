@@ -19,7 +19,7 @@ func newTerminalPrompter() *terminalPrompter {
 }
 
 func (t *terminalPrompter) Confirm(message string) bool {
-	fmt.Print(message + " [Y/n] ")
+	fmt.Print("\033[33m" + message + "\033[0m [Y/n] ")
 	if t.scanner.Scan() {
 		input := strings.TrimSpace(t.scanner.Text())
 		switch strings.ToLower(input) {
