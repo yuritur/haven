@@ -35,7 +35,8 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			if *verbose {
 				out = os.Stdout
 			}
-			prov, store, err := buildProviderAndStore(cmd.Context(), *providerName, out)
+			prompter := &terminalPrompter{}
+			prov, store, err := authenticateProvider(cmd.Context(), *providerName, prompter, out)
 			if err != nil {
 				return err
 			}
@@ -54,7 +55,6 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\033[33mProvider:\033[0m %s  \033[33mAccount:\033[0m %s  \033[33mRegion:\033[0m %s\n", providerName, identity.AccountID, identity.Region)
 
 	userIP, err := detectPublicIP()
 	if err != nil {

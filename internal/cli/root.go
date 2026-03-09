@@ -53,6 +53,15 @@ func Execute() {
 	}
 }
 
+func authenticateProvider(ctx context.Context, name string, p provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
+	switch name {
+	case "aws":
+		return awsprovider.Authenticate(ctx, p, out)
+	default:
+		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
+	}
+}
+
 func buildProviderAndStore(ctx context.Context, name string, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	switch name {
 	case "aws":
