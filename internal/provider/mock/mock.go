@@ -9,6 +9,7 @@ import (
 
 var _ provider.Provider = (*Provider)(nil)
 var _ provider.StateStore = (*StateStore)(nil)
+var _ provider.Prompter = (*Prompter)(nil)
 
 type Provider struct {
 	IdentityFn func(ctx context.Context) (provider.Identity, error)
@@ -81,4 +82,47 @@ func (m *QuotaEnsurer) EnsureQuota(ctx context.Context, instanceType string, pro
 		return errors.New("mock: EnsureQuotaFn not configured")
 	}
 	return m.EnsureQuotaFn(ctx, instanceType, promptFn)
+}
+
+type Prompter struct {
+	ConfirmFn func(string) bool
+	InputFn   func(string) string
+	SecretFn  func(string) string
+	SelectFn  func(string, []string) int
+	PrintFn   func(string)
+}
+
+func (m *Prompter) Confirm(message string) bool {
+	if m.ConfirmFn == nil {
+		return false
+	}
+	return m.ConfirmFn(message)
+}
+
+func (m *Prompter) Input(prompt string) string {
+	if m.InputFn == nil {
+		return ""
+	}
+	return m.InputFn(prompt)
+}
+
+func (m *Prompter) Secret(prompt string) string {
+	if m.SecretFn == nil {
+		return ""
+	}
+	return m.SecretFn(prompt)
+}
+
+func (m *Prompter) Select(prompt string, options []string) int {
+	if m.SelectFn == nil {
+		return -1
+	}
+	return m.SelectFn(prompt, options)
+}
+
+func (m *Prompter) Print(message string) {
+	if m.PrintFn == nil {
+		return
+	}
+	m.PrintFn(message)
 }
