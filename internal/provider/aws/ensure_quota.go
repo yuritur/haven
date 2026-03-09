@@ -142,7 +142,7 @@ func (p *AWSProvider) submitAndWait(ctx context.Context, instanceType string, qu
 }
 
 func (p *AWSProvider) waitForQuotaApproval(ctx context.Context, requestID string, quotaCode string) error {
-	fmt.Println("This may take a while. You can press Ctrl+C and run `haven deploy` later — the request is saved.")
+	fmt.Println("This may take a while. You can close this and run `haven deploy` later — the request is saved.")
 	spin := tui.StartSpinner("Waiting for quota approval...")
 	defer spin.Stop()
 
