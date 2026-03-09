@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="./data/haven.png" width="100%" alt="Haven">
-</p>
+
 
 # Haven
 
@@ -27,6 +25,7 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 ## Supported models
 
+
 | Model         | GPU         | ~$/hr |
 | ------------- | ----------- | ----- |
 | `llama3.2:1b` | —           | $0.08 |
@@ -35,6 +34,7 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 | `qwen3.5:4b`  | NVIDIA A10G | $1.01 |
 | `qwen3.5:9b`  | NVIDIA A10G | $1.01 |
 | `qwen3.5:27b` | NVIDIA A10G | $1.21 |
+
 
 *Prices are approximate AWS on-demand rates for us-east-1.*
 
@@ -68,9 +68,6 @@ haven chat
 
 # List deployments
 haven status
-
-# Show TLS fingerprint
-haven cert <deployment-id>
 
 # Tear down
 haven destroy <deployment-id>
