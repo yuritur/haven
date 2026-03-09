@@ -122,7 +122,7 @@ func resolveDeployment(ctx context.Context, store provider.StateStore, prompter 
 		return nil, fmt.Errorf("list deployments: %w", err)
 	}
 	if len(deployments) == 0 {
-		return nil, fmt.Errorf("no active deployments")
+		return nil, fmt.Errorf("no active deployments — run 'haven deploy <model>' first")
 	}
 	if len(deployments) == 1 {
 		return &deployments[0], nil
