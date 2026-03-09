@@ -52,7 +52,7 @@ Haven is a CLI tool that deploys open-source LLM models to the user's AWS accoun
 
 **Module layout:**
 - `cmd/haven/main.go` — entry point, calls `cli.Execute()`
-- `internal/cli/` — cobra commands: `deploy`, `destroy`, `status`, `cert`
+- `internal/cli/` — cobra commands: `deploy`, `destroy`, `status`, `cert`, `login`, `chat`; helpers: `prompt.go` (user input), `version.go`
 - `internal/provider/provider.go` — `Provider` and `StateStore` interfaces, `Deployment` struct
 - `internal/provider/aws/` — AWS provider: credentials, S3 bootstrap, S3 state store
 - `internal/provider/aws/cfn/` — CloudFormation template generation, stack create/poll, stack delete/poll
