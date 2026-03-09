@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
@@ -19,6 +20,25 @@ func loadConfig(ctx context.Context) (aws.Config, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return aws.Config{}, fmt.Errorf("load AWS config: %w", err)
+	}
+	return cfg, nil
+}
+
+func loadConfigWithProfile(ctx context.Context, profile string) (aws.Config, error) {
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(profile))
+	if err != nil {
+		return aws.Config{}, fmt.Errorf("load AWS config (profile %q): %w", profile, err)
+	}
+	return cfg, nil
+}
+
+func loadConfigWithStaticCredentials(ctx context.Context, accessKey, secretKey, region string) (aws.Config, error) {
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")),
+		config.WithRegion(region),
+	)
+	if err != nil {
+		return aws.Config{}, fmt.Errorf("load AWS config with static credentials: %w", err)
 	}
 	return cfg, nil
 }
