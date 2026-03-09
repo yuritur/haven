@@ -16,6 +16,7 @@ type AWSProvider struct {
 	cfg        awssdk.Config
 	identity   provider.Identity
 	bucketName string
+	quotaStore *quota.Store
 	out        io.Writer
 }
 
@@ -37,15 +38,17 @@ func New(ctx context.Context, out io.Writer) (provider.Provider, provider.StateS
 		return nil, nil, err
 	}
 
-	return &AWSProvider{
+	p := &AWSProvider{
 		cfg:        cfg,
 		out:        out,
 		bucketName: store.bucketName,
+		quotaStore: quota.NewStore(cfg, store.bucketName),
 		identity: provider.Identity{
 			AccountID: id.AccountID,
 			Region:    id.Region,
 		},
-	}, store, nil
+	}
+	return p, store, nil
 }
 
 func (p *AWSProvider) Identity(_ context.Context) (provider.Identity, error) {
@@ -97,16 +100,14 @@ func (p *AWSProvider) RequestGPUQuota(ctx context.Context, instanceType string) 
 		return nil, err
 	}
 	req.InstanceType = instanceType
-	store := quota.NewStore(p.cfg, p.bucketName)
-	if err := store.Save(ctx, *req); err != nil {
+	if err := p.quotaStore.Save(ctx, *req); err != nil {
 		return nil, fmt.Errorf("save quota request: %w", err)
 	}
 	return req, nil
 }
 
 func (p *AWSProvider) LoadGPUQuotaRequest(ctx context.Context, quotaCode string) (*quota.QuotaRequest, error) {
-	store := quota.NewStore(p.cfg, p.bucketName)
-	return store.Load(ctx, quotaCode)
+	return p.quotaStore.Load(ctx, quotaCode)
 }
 
 func (p *AWSProvider) GetGPUQuotaRequestStatus(ctx context.Context, requestID string) (string, error) {
@@ -114,6 +115,5 @@ func (p *AWSProvider) GetGPUQuotaRequestStatus(ctx context.Context, requestID st
 }
 
 func (p *AWSProvider) DeleteGPUQuotaRequest(ctx context.Context, quotaCode string) error {
-	store := quota.NewStore(p.cfg, p.bucketName)
-	return store.Delete(ctx, quotaCode)
+	return p.quotaStore.Delete(ctx, quotaCode)
 }

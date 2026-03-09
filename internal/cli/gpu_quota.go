@@ -55,6 +55,22 @@ func handleGPUQuota(ctx context.Context, checker gpuQuotaChecker, instanceType s
 	return handleInsufficientQuota(ctx, checker, status, instanceType, region, promptFn)
 }
 
+func resolveTerminalStatus(ctx context.Context, checker gpuQuotaChecker, status string, quotaCode string) (*gpuQuotaResult, bool) {
+	switch status {
+	case "APPROVED":
+		fmt.Println("GPU quota increase approved!")
+		_ = checker.DeleteGPUQuotaRequest(ctx, quotaCode)
+		return &gpuQuotaResult{Proceed: true}, true
+	case "DENIED", "CASE_CLOSED":
+		fmt.Printf("GPU quota increase request was %s.\n", strings.ToLower(status))
+		fmt.Println("Please request a quota increase manually and try again.")
+		_ = checker.DeleteGPUQuotaRequest(ctx, quotaCode)
+		return &gpuQuotaResult{Proceed: false}, true
+	default:
+		return nil, false
+	}
+}
+
 func handleExistingRequest(ctx context.Context, checker gpuQuotaChecker, req *quota.QuotaRequest, promptFn func(string) string) (*gpuQuotaResult, error) {
 	status, err := checker.GetGPUQuotaRequestStatus(ctx, req.RequestID)
 	if err != nil {
@@ -62,29 +78,20 @@ func handleExistingRequest(ctx context.Context, checker gpuQuotaChecker, req *qu
 		return &gpuQuotaResult{Proceed: true}, nil
 	}
 
-	switch status {
-	case "APPROVED":
-		fmt.Println("GPU quota increase approved!")
-		_ = checker.DeleteGPUQuotaRequest(ctx, req.QuotaCode)
-		return &gpuQuotaResult{Proceed: true}, nil
-
-	case "DENIED", "NOT_APPLICABLE":
-		fmt.Printf("GPU quota increase request was %s.\n", strings.ToLower(status))
-		fmt.Println("Please request a quota increase manually and try again.")
-		_ = checker.DeleteGPUQuotaRequest(ctx, req.QuotaCode)
-		return &gpuQuotaResult{Proceed: false}, nil
-
-	default: // PENDING, CASE_OPENED
-		fmt.Printf("A GPU quota increase request is pending (status: %s, submitted: %s).\n",
-			status, req.CreatedAt.Format(time.RFC3339))
-		choice := promptFn("Wait for approval? [Y/n]: ")
-		choice = strings.TrimSpace(strings.ToLower(choice))
-		if choice == "n" || choice == "no" {
-			fmt.Println("Run `haven deploy` again when the quota is approved.")
-			return &gpuQuotaResult{Proceed: false}, nil
-		}
-		return waitForQuotaApproval(ctx, checker, req.RequestID, req.QuotaCode)
+	if result, terminal := resolveTerminalStatus(ctx, checker, status, req.QuotaCode); terminal {
+		return result, nil
 	}
+
+	// PENDING, CASE_OPENED
+	fmt.Printf("A GPU quota increase request is pending (status: %s, submitted: %s).\n",
+		status, req.CreatedAt.Format(time.RFC3339))
+	choice := promptFn("Wait for approval? [Y/n]: ")
+	choice = strings.TrimSpace(strings.ToLower(choice))
+	if choice == "n" || choice == "no" {
+		fmt.Println("Run `haven deploy` again when the quota is approved.")
+		return &gpuQuotaResult{Proceed: false}, nil
+	}
+	return waitForQuotaApproval(ctx, checker, req.RequestID, req.QuotaCode)
 }
 
 func handleInsufficientQuota(ctx context.Context, checker gpuQuotaChecker, status *quota.QuotaStatus, instanceType string, region string, promptFn func(string) string) (*gpuQuotaResult, error) {
@@ -147,18 +154,9 @@ func waitForQuotaApproval(ctx context.Context, checker gpuQuotaChecker, requestI
 			return nil, fmt.Errorf("poll quota request: %w", err)
 		}
 
-		switch status {
-		case "APPROVED":
+		if result, terminal := resolveTerminalStatus(ctx, checker, status, quotaCode); terminal {
 			spin.Stop()
-			fmt.Println("GPU quota increase approved!")
-			_ = checker.DeleteGPUQuotaRequest(ctx, quotaCode)
-			return &gpuQuotaResult{Proceed: true}, nil
-		case "DENIED", "NOT_APPLICABLE":
-			spin.Stop()
-			fmt.Printf("GPU quota increase request was %s.\n", strings.ToLower(status))
-			fmt.Println("Please request a quota increase manually and try again.")
-			_ = checker.DeleteGPUQuotaRequest(ctx, quotaCode)
-			return &gpuQuotaResult{Proceed: false}, nil
+			return result, nil
 		}
 	}
 }
