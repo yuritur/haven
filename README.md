@@ -49,13 +49,13 @@ brew install yuritur/tap/haven
 ### macOS / Linux (script)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/yuritur/haven/master/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.sh | sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/yuritur/haven/master/install.ps1 | iex
+irm https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.ps1 | iex
 ```
 
 ### From source

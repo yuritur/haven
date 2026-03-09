@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # Haven installer for Windows
-# Usage: irm https://raw.githubusercontent.com/yuritur/haven/master/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.ps1 | iex
 
 $ErrorActionPreference = 'Stop'
 
