@@ -77,7 +77,7 @@ func (p *AWSProvider) handleExistingQuotaRequest(ctx context.Context, req *quota
 
 	fmt.Printf("A GPU quota increase request is pending (status: %s, submitted: %s).\n",
 		status, req.CreatedAt.Format(time.RFC3339))
-	choice := promptFn("Wait for approval? [Y/n]: ")
+	choice := promptFn("\033[33mWait for approval? [Y/n]:\033[0m ")
 	choice = strings.TrimSpace(strings.ToLower(choice))
 	if choice == "n" || choice == "no" {
 		fmt.Println("Run `haven deploy` again when the quota is approved.")
@@ -87,12 +87,20 @@ func (p *AWSProvider) handleExistingQuotaRequest(ctx context.Context, req *quota
 }
 
 func (p *AWSProvider) handleInsufficientQuota(ctx context.Context, status *quota.QuotaStatus, instanceType string, promptFn func(string) string) error {
-	fmt.Printf("\nYour AWS account has %.0f vCPU quota for this instance family (%d required for %s).\n\n",
+	fmt.Printf("\nYour AWS account has %.0f vCPU quota for this instance family (%d required for %s).\n",
 		status.CurrentVCPUs, status.RequiredVCPUs, instanceType)
+
+	if !status.APIAvailable {
+		fmt.Println("Quota is not yet registered in AWS Service Quotas for this account.")
+		p.printManualInstructions(status.QuotaCode, status.RequiredVCPUs)
+		return provider.ErrQuotaUserExit
+	}
+
+	fmt.Println()
 	fmt.Println("  [1] I'll request the increase myself")
 	fmt.Println("  [2] Let Haven request it (may take several minutes)")
 
-	choice := promptFn("\nChoice [1/2]: ")
+	choice := promptFn("\n\033[33mChoice [1/2]:\033[0m ")
 	choice = strings.TrimSpace(choice)
 
 	switch choice {

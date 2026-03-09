@@ -2,12 +2,14 @@ package quota
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/servicequotas"
+	"github.com/aws/aws-sdk-go-v2/service/servicequotas/types"
 )
 
 const serviceCode = "ec2"
@@ -17,6 +19,7 @@ type QuotaStatus struct {
 	RequiredVCPUs int
 	Sufficient    bool
 	QuotaCode     string
+	APIAvailable  bool
 }
 
 type QuotaRequest struct {
@@ -29,10 +32,10 @@ type QuotaRequest struct {
 }
 
 var familyToQuotaCode = map[string]string{
-	"g4dn": "L-DB2BBE81",
-	"g5":   "L-DB2BBE81",
-	"g5g":  "L-DB2BBE81",
-	"g6":   "L-DB2BBE81",
+	"g4dn": "L-DB2E81BA",
+	"g5":   "L-DB2E81BA",
+	"g5g":  "L-DB2E81BA",
+	"g6":   "L-DB2E81BA",
 	"p3":   "L-417A185B",
 	"p4":   "L-417A185B",
 	"p5":   "L-417A185B",
@@ -82,21 +85,43 @@ func CheckQuota(ctx context.Context, cfg aws.Config, instanceType string) (*Quot
 	}
 
 	client := servicequotas.NewFromConfig(cfg)
-	out, err := client.GetServiceQuota(ctx, &servicequotas.GetServiceQuotaInput{
-		ServiceCode: aws.String(serviceCode),
-		QuotaCode:   aws.String(quotaCode),
-	})
+	current, apiAvailable, err := getAppliedQuota(ctx, client, quotaCode)
 	if err != nil {
-		return nil, fmt.Errorf("get service quota %s: %w", quotaCode, err)
+		return nil, err
 	}
 
-	current := aws.ToFloat64(out.Quota.Value)
 	return &QuotaStatus{
 		CurrentVCPUs:  current,
 		RequiredVCPUs: vcpus,
 		Sufficient:    current >= float64(vcpus),
 		QuotaCode:     quotaCode,
+		APIAvailable:  apiAvailable,
 	}, nil
+}
+
+func getAppliedQuota(ctx context.Context, client *servicequotas.Client, quotaCode string) (value float64, apiAvailable bool, err error) {
+	out, err := client.GetServiceQuota(ctx, &servicequotas.GetServiceQuotaInput{
+		ServiceCode: aws.String(serviceCode),
+		QuotaCode:   aws.String(quotaCode),
+	})
+	if err == nil {
+		return aws.ToFloat64(out.Quota.Value), true, nil
+	}
+
+	var nsre *types.NoSuchResourceException
+	if !errors.As(err, &nsre) {
+		return 0, false, fmt.Errorf("get service quota %s: %w", quotaCode, err)
+	}
+
+	// Fresh account — no applied value yet, fall back to AWS default
+	defOut, defErr := client.GetAWSDefaultServiceQuota(ctx, &servicequotas.GetAWSDefaultServiceQuotaInput{
+		ServiceCode: aws.String(serviceCode),
+		QuotaCode:   aws.String(quotaCode),
+	})
+	if defErr != nil {
+		return 0, false, fmt.Errorf("get default service quota %s: %w", quotaCode, defErr)
+	}
+	return aws.ToFloat64(defOut.Quota.Value), true, nil
 }
 
 func RequestIncrease(ctx context.Context, cfg aws.Config, quotaCode string, desiredValue float64) (*QuotaRequest, error) {

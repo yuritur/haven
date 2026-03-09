@@ -34,10 +34,10 @@ func TestQuotaCodeForInstance(t *testing.T) {
 		wantCode     string
 		wantErr      bool
 	}{
-		{"g5.xlarge", "L-DB2BBE81", false},
-		{"g4dn.xlarge", "L-DB2BBE81", false},
-		{"g5g.xlarge", "L-DB2BBE81", false},
-		{"g6.xlarge", "L-DB2BBE81", false},
+		{"g5.xlarge", "L-DB2E81BA", false},
+		{"g4dn.xlarge", "L-DB2E81BA", false},
+		{"g5g.xlarge", "L-DB2E81BA", false},
+		{"g6.xlarge", "L-DB2E81BA", false},
 		{"p3.2xlarge", "L-417A185B", false},
 		{"t3.large", "", true},
 		{"m5.large", "", true},

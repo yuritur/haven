@@ -54,13 +54,21 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Provider: %s  Account: %s  Region: %s\n", providerName, identity.AccountID, identity.Region)
+	fmt.Printf("\033[33mProvider:\033[0m %s  \033[33mAccount:\033[0m %s  \033[33mRegion:\033[0m %s\n", providerName, identity.AccountID, identity.Region)
 
 	userIP, err := detectPublicIP()
 	if err != nil {
 		return fmt.Errorf("detect public IP: %w", err)
 	}
-	fmt.Printf("Restricting port 11434 to: %s\n\n", userIP)
+	fmt.Printf("\033[33mRestricting port 11434 to:\033[0m %s\n\n", userIP)
+
+	existing, err := store.List(ctx)
+	if err != nil {
+		return fmt.Errorf("check existing deployments: %w", err)
+	}
+	if len(existing) > 0 {
+		return fmt.Errorf("deployment %s is already active — run `haven destroy %s` first\n\nNote: multiple simultaneous deployments are not yet supported but will be in a future release", existing[0].ID, existing[0].ID)
+	}
 
 	apiKey, err := generateAPIKey()
 	if err != nil {
