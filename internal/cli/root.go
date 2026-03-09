@@ -58,7 +58,7 @@ func Execute() {
 	}
 }
 
-func authenticateProvider(ctx context.Context, name string, p provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
+func buildProvider(ctx context.Context, name string, p provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	switch name {
 	case "aws":
 		return awsprovider.Authenticate(ctx, p, out)

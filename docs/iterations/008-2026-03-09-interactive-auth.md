@@ -29,9 +29,9 @@ The CLI provides a `Prompter` interface for terminal I/O, keeping the provider t
 | `internal/provider/provider.go` | Added `Prompter` interface, `ARN` field to `Identity` |
 | `internal/provider/aws/credentials.go` | Added `loadConfigWithProfile`, `loadConfigWithStaticCredentials`, `ARN` capture |
 | `internal/provider/aws/provider.go` | Populated `ARN` in Identity |
-| `internal/cli/root.go` | Added `authenticateProvider()` dispatch function |
-| `internal/cli/deploy.go` | Uses `authenticateProvider`, removed duplicate identity print, routed quota prompts through shared scanner |
-| `internal/cli/destroy.go` | Uses `authenticateProvider` for interactive auth |
+| `internal/cli/root.go` | Added `buildProvider()` dispatch function |
+| `internal/cli/deploy.go` | Uses `buildProvider`, removed duplicate identity print, routed quota prompts through shared scanner |
+| `internal/cli/destroy.go` | Uses `buildProvider` for interactive auth |
 | `internal/provider/mock/mock.go` | Added mock `Prompter` |
 | `go.mod` | Added `golang.org/x/term`, promoted `aws-sdk-go-v2/credentials` |
 

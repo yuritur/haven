@@ -24,7 +24,7 @@ func newDestroyCmd(providerName *string, verbose *bool) *cobra.Command {
 				out = os.Stdout
 			}
 			prompter := newTerminalPrompter()
-			prov, store, err := authenticateProvider(cmd.Context(), *providerName, prompter, out)
+			prov, store, err := buildProvider(cmd.Context(), *providerName, prompter, out)
 			if err != nil {
 				return err
 			}
