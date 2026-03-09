@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="./data/haven.png" width="100%" alt="Haven">
-</p>
+
 
 # Haven
 
@@ -27,6 +25,7 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 ## Supported models
 
+
 | Model         | GPU         | ~$/hr |
 | ------------- | ----------- | ----- |
 | `llama3.2:1b` | —           | $0.08 |
@@ -35,6 +34,7 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 | `qwen3.5:4b`  | NVIDIA A10G | $1.01 |
 | `qwen3.5:9b`  | NVIDIA A10G | $1.01 |
 | `qwen3.5:27b` | NVIDIA A10G | $1.21 |
+
 
 *Prices are approximate AWS on-demand rates for us-east-1.*
 
@@ -57,14 +57,17 @@ go install github.com/havenapp/haven/cmd/haven@latest
 > **Note:** Currently only AWS is supported as a cloud provider. No prior AWS CLI setup is required — Haven will guide you through creating an account and configuring credentials if needed.
 
 ```bash
+# Authenticate with your cloud provider (once)
+haven login
+
 # Deploy a model
 haven deploy llama3.2:1b
 
+# Chat with your model
+haven chat
+
 # List deployments
 haven status
-
-# Show TLS fingerprint
-haven cert <deployment-id>
 
 # Tear down
 haven destroy <deployment-id>

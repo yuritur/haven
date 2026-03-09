@@ -17,14 +17,18 @@ func newDestroyCmd(providerName *string, verbose *bool) *cobra.Command {
 		Use:     "destroy <deployment-id>",
 		Short:   "Destroy a deployment and release all cloud resources",
 		Example: "  haven destroy haven-a1b2c3d4",
-		Args:    cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("missing deployment ID\n\n  Usage: haven destroy <deployment-id>\n  Example: haven destroy haven-a1b2c3d4")
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var out io.Writer = io.Discard
 			if *verbose {
 				out = os.Stdout
 			}
-			prompter := newTerminalPrompter()
-			prov, store, err := buildProvider(cmd.Context(), *providerName, prompter, out)
+			prov, store, err := buildProvider(cmd.Context(), *providerName, out)
 			if err != nil {
 				return err
 			}
