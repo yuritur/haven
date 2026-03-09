@@ -17,9 +17,10 @@ func NewRootCmd() *cobra.Command {
 	var verbose bool
 
 	root := &cobra.Command{
-		Use:   "haven",
-		Short: "Deploy open-source LLM models to your own cloud",
-		Long:  "Haven deploys LLM models to your cloud with one command.\nYour data never leaves your infrastructure.",
+		Use:     "haven",
+		Short:   "Deploy open-source LLM models to your own cloud",
+		Long:    "Haven deploys LLM models to your cloud with one command.\nYour data never leaves your infrastructure.",
+		Version: version,
 	}
 
 	root.PersistentFlags().StringVar(&providerName, "provider", "aws", "Cloud provider to use (aws)")
