@@ -40,11 +40,29 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 ## Install
 
+### macOS / Linux (Homebrew)
+
+```bash
+brew install yuritur/tap/haven
+```
+
+### macOS / Linux (script)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.sh | sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/yuritur/haven/master/scripts/install.ps1 | iex
+```
+
+### From source
+
 ```bash
 go install github.com/havenapp/haven/cmd/haven@latest
 ```
-
-<!-- TODO: add pre-built binaries via GitHub Releases -->
 
 ## Usage
 

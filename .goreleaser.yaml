@@ -32,3 +32,16 @@ changelog:
     exclude:
       - "^docs:"
       - "^chore:"
+
+brews:
+  - repository:
+      owner: yuritur
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/yuritur/haven"
+    description: "Deploy open-source LLMs to your own cloud with one command"
+    license: "MIT"
+    install: |
+      bin.install "haven"
+    test: |
+      system "#{bin}/haven", "--version"
