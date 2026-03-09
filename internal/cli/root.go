@@ -53,8 +53,7 @@ func Execute() {
 		if errors.Is(err, provider.ErrNoAccount) {
 			return
 		}
-		fmt.Fprintf(os.Stderr, "\x1b[31merror: %v\x1b[0m\n", err)
-		os.Stderr.Sync()
+		fmt.Fprintf(os.Stderr, "\033[31merror: %v\033[0m\n", err)
 		os.Exit(1)
 	}
 }
