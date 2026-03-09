@@ -81,7 +81,9 @@ Small increases (e.g., 4 vCPUs for a single `g5.xlarge`) are typically auto-appr
 
 If you prefer, use the [AWS Console](https://console.aws.amazon.com/servicequotas/home#!/services/ec2/quotas/L-DB2E81BA) to make the request.
 
-## Use with curl (as proof of work)
+## Use with haven chat or curl
+
+Use `haven chat` to talk to your deployment, or call the API directly:
 
 ```bash
 curl --cacert data/certs/<deployment-id>.pem \

@@ -204,12 +204,12 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		fmt.Fprintf(os.Stderr, "warning: could not save %s: %v\n", certFile, err)
 	}
 
-	fmt.Printf("\nDeployment ready!\n")
+	fmt.Printf("\n\033[33mDeployment ready!\033[0m\n")
 	fmt.Printf("  Endpoint : %s\n", deployment.Endpoint)
 	fmt.Printf("  API Key  : %s\n", deployment.APIKey)
 	fmt.Printf("  TLS Cert : %s\n", certFile)
 	fmt.Printf("  ID       : %s\n\n", deployment.ID)
-	fmt.Printf("Test:\n")
+	fmt.Printf("Use \033[33m`haven chat`\033[0m to talk to the model, or call the API directly:\n")
 	fmt.Printf("  curl -k --cacert %s %s/chat/completions \\\n", certFile, deployment.Endpoint)
 	fmt.Printf("    -H 'Authorization: Bearer %s' \\\n", deployment.APIKey)
 	fmt.Printf("    -H 'Content-Type: application/json' \\\n")
