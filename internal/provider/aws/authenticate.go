@@ -16,7 +16,7 @@ import (
 	"github.com/havenapp/haven/internal/provider/aws/quota"
 )
 
-type probeResult struct {
+type authResult struct {
 	cfg      awssdk.Config
 	identity provider.Identity
 }
@@ -24,47 +24,60 @@ type probeResult struct {
 // Authenticate runs the full interactive AWS authentication flow.
 // It returns a ready-to-use Provider and StateStore, or an error.
 func Authenticate(ctx context.Context, prompter provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
-	pr, err := probe(ctx)
-	if err == nil {
-		if confirmIdentity(prompter, pr.identity) {
-			return initFromProbe(ctx, pr, out)
-		}
-		pr, err = switchProfile(ctx, prompter)
+	ar, err := detectCredentials(ctx)
+	if err != nil {
+		ar, err = onboard(ctx, prompter)
 		if err != nil {
 			return nil, nil, err
 		}
-		return initFromProbe(ctx, pr, out)
+		return initFromResult(ctx, ar, out)
 	}
 
-	pr, err = onboard(ctx, prompter)
+	if confirmIdentity(prompter, ar.identity) {
+		return initFromResult(ctx, ar, out)
+	}
+
+	ar, err = switchProfile(ctx, prompter)
 	if err != nil {
 		return nil, nil, err
 	}
-	return initFromProbe(ctx, pr, out)
+	return initFromResult(ctx, ar, out)
 }
 
-func probe(ctx context.Context) (*probeResult, error) {
-	pr, err := probeWithConfig(ctx, loadConfig)
+func detectCredentials(ctx context.Context) (*authResult, error) {
+	ar, err := resolveDefault(ctx)
 	if err != nil {
 		// Fallback: try the "haven" profile (saved by previous onboarding).
-		if fallback, ferr := probeWithProfile(ctx, "haven"); ferr == nil {
+		if fallback, ferr := resolveProfile(ctx, "haven"); ferr == nil {
 			return fallback, nil
 		}
 		return nil, err
 	}
-	return pr, nil
+	return ar, nil
 }
 
-func probeWithConfig(ctx context.Context, loadFn func(context.Context) (awssdk.Config, error)) (*probeResult, error) {
-	cfg, err := loadFn(ctx)
+func resolveDefault(ctx context.Context) (*authResult, error) {
+	cfg, err := loadConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
+	return verifyIdentity(ctx, cfg)
+}
+
+func resolveProfile(ctx context.Context, profile string) (*authResult, error) {
+	cfg, err := loadConfigWithProfile(ctx, profile)
+	if err != nil {
+		return nil, err
+	}
+	return verifyIdentity(ctx, cfg)
+}
+
+func verifyIdentity(ctx context.Context, cfg awssdk.Config) (*authResult, error) {
 	id, err := getIdentity(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
-	return &probeResult{
+	return &authResult{
 		cfg: cfg,
 		identity: provider.Identity{
 			AccountID: id.AccountID,
@@ -74,12 +87,6 @@ func probeWithConfig(ctx context.Context, loadFn func(context.Context) (awssdk.C
 	}, nil
 }
 
-func probeWithProfile(ctx context.Context, profile string) (*probeResult, error) {
-	return probeWithConfig(ctx, func(ctx context.Context) (awssdk.Config, error) {
-		return loadConfigWithProfile(ctx, profile)
-	})
-}
-
 func confirmIdentity(p provider.Prompter, id provider.Identity) bool {
 	p.Print(fmt.Sprintf("\n  AWS Account:  %s", id.AccountID))
 	p.Print(fmt.Sprintf("  Region:       %s", id.Region))
@@ -87,10 +94,10 @@ func confirmIdentity(p provider.Prompter, id provider.Identity) bool {
 	return p.Confirm("Continue with this account?")
 }
 
-func switchProfile(ctx context.Context, p provider.Prompter) (*probeResult, error) {
+func switchProfile(ctx context.Context, p provider.Prompter) (*authResult, error) {
 	profiles := listProfiles()
 	if len(profiles) == 0 {
-		return collectAndProbe(ctx, p)
+		return collectAndResolve(ctx, p)
 	}
 
 	options := make([]string, len(profiles)+1)
@@ -102,10 +109,10 @@ func switchProfile(ctx context.Context, p provider.Prompter) (*probeResult, erro
 		return nil, fmt.Errorf("selection cancelled")
 	}
 	if idx == len(profiles) {
-		return collectAndProbe(ctx, p)
+		return collectAndResolve(ctx, p)
 	}
 
-	pr, err := probeWithProfile(ctx, profiles[idx])
+	pr, err := resolveProfile(ctx, profiles[idx])
 	if err != nil {
 		return nil, fmt.Errorf("profile %q: %w", profiles[idx], err)
 	}
@@ -115,7 +122,7 @@ func switchProfile(ctx context.Context, p provider.Prompter) (*probeResult, erro
 	return pr, nil
 }
 
-func onboard(ctx context.Context, p provider.Prompter) (*probeResult, error) {
+func onboard(ctx context.Context, p provider.Prompter) (*authResult, error) {
 	p.Print("\nNo AWS credentials found.\n")
 
 	if !p.Confirm("Do you have an AWS account?") {
@@ -125,10 +132,10 @@ func onboard(ctx context.Context, p provider.Prompter) (*probeResult, error) {
 		return nil, provider.ErrNoAccount
 	}
 
-	return collectAndProbe(ctx, p)
+	return collectAndResolve(ctx, p)
 }
 
-func collectAndProbe(ctx context.Context, p provider.Prompter) (*probeResult, error) {
+func collectAndResolve(ctx context.Context, p provider.Prompter) (*authResult, error) {
 	var cfg awssdk.Config
 	var id identity
 
@@ -146,7 +153,7 @@ func collectAndProbe(ctx context.Context, p provider.Prompter) (*probeResult, er
 			if err := saveCredentials(accessKey, secretKey, region); err != nil {
 				return nil, err
 			}
-			return &probeResult{
+			return &authResult{
 				cfg: cfg,
 				identity: provider.Identity{
 					AccountID: id.AccountID,
@@ -316,7 +323,7 @@ func parseINISections(path string) []string {
 	return sections
 }
 
-func initFromProbe(ctx context.Context, pr *probeResult, out io.Writer) (provider.Provider, provider.StateStore, error) {
+func initFromResult(ctx context.Context, pr *authResult, out io.Writer) (provider.Provider, provider.StateStore, error) {
 	store, err := newS3StateStore(ctx, pr.cfg, pr.identity.AccountID)
 	if err != nil {
 		return nil, nil, err
