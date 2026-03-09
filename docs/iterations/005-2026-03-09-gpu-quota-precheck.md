@@ -1,7 +1,7 @@
 # Iteration 005 — GPU vCPU quota pre-check
 
 **Date:** 2026-03-09
-**Branch:** `master`
+**Branch:** `feat/gpu-quota-precheck`
 
 ## What was done
 
@@ -13,6 +13,10 @@ AWS accounts have 0 vCPU quota by default for G/P instance families. When deploy
 
 Pre-flight quota check before GPU deploy. If quota is insufficient, the user chooses between requesting the increase manually (Haven prints AWS Console URL + CLI command) or letting Haven submit the request via AWS Service Quotas API. Quota requests are persisted to S3 so they survive script restarts.
 
+### Key design decision
+
+All quota logic is encapsulated in the AWS provider (`internal/provider/aws/`). The CLI layer knows only a single provider-agnostic interface method `EnsureQuota(ctx, instanceType, promptFn) error`. No AWS-specific types or imports leak into `internal/cli/`. This preserves the multi-provider abstraction.
+
 ### Files created
 
 | File | Description |
@@ -20,16 +24,17 @@ Pre-flight quota check before GPU deploy. If quota is insufficient, the user cho
 | `internal/provider/aws/quota/quota.go` | Quota check, increase request, status polling via Service Quotas API |
 | `internal/provider/aws/quota/store.go` | S3 persistence for quota requests (`quota-requests/{code}.json`) |
 | `internal/provider/aws/quota/quota_test.go` | Table-driven tests for quota code and vCPU mappings |
-| `internal/cli/gpu_quota.go` | Interactive quota flow: check, prompt, request, poll with spinner |
-| `internal/cli/gpu_quota_test.go` | Handler tests with mock QuotaChecker (6 test cases) |
+| `internal/provider/aws/ensure_quota.go` | `EnsureQuota` method — interactive quota flow: check, prompt, request, poll |
+| `internal/provider/aws/ensure_quota_test.go` | Tests for resolve terminal status, manual choice, non-GPU early return |
 
 ### Files modified
 
 | File | Change |
 |---|---|
-| `internal/provider/aws/provider.go` | Added `bucketName`, `quotaStore` fields; implemented 5 quota methods |
-| `internal/cli/deploy.go` | Inserted quota pre-check before `prov.Deploy()` for GPU instances |
-| `internal/provider/mock/mock.go` | Added `QuotaChecker` mock with pluggable function fields |
+| `internal/provider/provider.go` | Added `ErrQuotaUserExit` sentinel error |
+| `internal/provider/aws/provider.go` | Added `bucketName`, `quotaStore` fields |
+| `internal/cli/deploy.go` | Provider-agnostic `EnsureQuota` call via type assertion |
+| `internal/provider/mock/mock.go` | Added `QuotaEnsurer` mock (single function field) |
 | `go.mod` | Added `github.com/aws/aws-sdk-go-v2/service/servicequotas` |
 
 ## What works
@@ -38,10 +43,11 @@ Pre-flight quota check before GPU deploy. If quota is insufficient, the user cho
 
 Key behaviors:
 - GPU deploy detects 0 vCPU quota and prompts before CloudFormation
-- Option 1 prints AWS Console URL and CLI command, then exits
+- Option 1 prints AWS Console URL and CLI command, then exits cleanly
 - Option 2 submits Service Quotas request, saves to S3, polls with spinner
 - Re-running `haven deploy` finds pending request in S3 and resumes polling
 - Graceful degradation: if Service Quotas API is inaccessible, skips check
+- Zero AWS-specific imports in `internal/cli/`
 
 ## What's not covered
 
