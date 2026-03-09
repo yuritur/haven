@@ -293,7 +293,7 @@ func parseINISections(path string) []string {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var sections []string
 	scanner := bufio.NewScanner(f)
