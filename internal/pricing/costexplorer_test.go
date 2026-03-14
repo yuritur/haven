@@ -1,12 +1,24 @@
 package pricing
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/costexplorer"
 	cetypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 )
+
+type mockCEClient struct {
+	out *costexplorer.GetCostAndUsageOutput
+	err error
+}
+
+func (m *mockCEClient) GetCostAndUsage(ctx context.Context, params *costexplorer.GetCostAndUsageInput, optFns ...func(*costexplorer.Options)) (*costexplorer.GetCostAndUsageOutput, error) {
+	return m.out, m.err
+}
 
 func TestParseGetCostAndUsageOutput(t *testing.T) {
 	tests := []struct {
@@ -146,4 +158,66 @@ func TestParseGetCostAndUsageOutput(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFetchActualCost(t *testing.T) {
+	ctx := context.Background()
+	from := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 3, 13, 0, 0, 0, 0, time.UTC)
+
+	t.Run("api error is returned", func(t *testing.T) {
+		client := &mockCEClient{err: errors.New("access denied")}
+		got, err := FetchActualCost(ctx, client, "i-abc123", from, to)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if got != nil {
+			t.Fatalf("expected nil result, got %+v", got)
+		}
+	})
+
+	t.Run("successful response parsed", func(t *testing.T) {
+		client := &mockCEClient{
+			out: &costexplorer.GetCostAndUsageOutput{
+				ResultsByTime: []cetypes.ResultByTime{
+					{
+						TimePeriod: &cetypes.DateInterval{
+							Start: aws.String("2026-03-10"),
+							End:   aws.String("2026-03-11"),
+						},
+						Total: map[string]cetypes.MetricValue{
+							"UnblendedCost": {
+								Amount: aws.String("3.00"),
+								Unit:   aws.String("USD"),
+							},
+						},
+					},
+				},
+			},
+		}
+		got, err := FetchActualCost(ctx, client, "i-abc123", from, to)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got == nil {
+			t.Fatal("expected non-nil result")
+		}
+		if !approxEqual(got.Total, 3.00, 0.001) {
+			t.Errorf("Total = %f, want 3.00", got.Total)
+		}
+		if got.Currency != "USD" {
+			t.Errorf("Currency = %q, want USD", got.Currency)
+		}
+	})
+
+	t.Run("empty response returns nil", func(t *testing.T) {
+		client := &mockCEClient{out: &costexplorer.GetCostAndUsageOutput{}}
+		got, err := FetchActualCost(ctx, client, "i-abc123", from, to)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != nil {
+			t.Fatalf("expected nil, got %+v", got)
+		}
+	})
 }

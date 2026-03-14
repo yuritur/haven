@@ -10,15 +10,21 @@ import (
 	cetypes "github.com/aws/aws-sdk-go-v2/service/costexplorer/types"
 )
 
+type CostExplorerClient interface {
+	GetCostAndUsage(ctx context.Context, params *costexplorer.GetCostAndUsageInput, optFns ...func(*costexplorer.Options)) (*costexplorer.GetCostAndUsageOutput, error)
+}
+
+func NewCostExplorerClient(cfg aws.Config) CostExplorerClient {
+	return costexplorer.NewFromConfig(cfg)
+}
+
 type ActualCost struct {
 	Total       float64
 	Currency    string
 	LastUpdated time.Time
 }
 
-func FetchActualCost(ctx context.Context, cfg aws.Config, instanceID string, from time.Time, to time.Time) (*ActualCost, error) {
-	client := costexplorer.NewFromConfig(cfg)
-
+func FetchActualCost(ctx context.Context, client CostExplorerClient, instanceID string, from time.Time, to time.Time) (*ActualCost, error) {
 	out, err := client.GetCostAndUsage(ctx, &costexplorer.GetCostAndUsageInput{
 		TimePeriod: &cetypes.DateInterval{
 			Start: aws.String(from.Format("2006-01-02")),
@@ -34,7 +40,7 @@ func FetchActualCost(ctx context.Context, cfg aws.Config, instanceID string, fro
 		},
 	})
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 
 	return parseGetCostAndUsageOutput(out)
