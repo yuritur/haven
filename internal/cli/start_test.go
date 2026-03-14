@@ -38,7 +38,7 @@ func TestRunStart_Success(t *testing.T) {
 		},
 	}
 
-	err := runStart(context.Background(), prov, "haven-test1234")
+	err := runStart(context.Background(), prov, "haven-test1234", nil)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestRunStart_NotStopped(t *testing.T) {
 		},
 	}
 
-	err := runStart(context.Background(), prov, "haven-test1234")
+	err := runStart(context.Background(), prov, "haven-test1234", nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

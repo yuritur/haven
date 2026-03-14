@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/havenapp/haven/internal/provider"
+	"github.com/havenapp/haven/internal/tui"
 )
 
 func newStopCmd(providerName *string) *cobra.Command {
@@ -19,6 +20,8 @@ func newStopCmd(providerName *string) *cobra.Command {
 		Example: "  haven stop\n  haven stop haven-a1b2c3d4",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			spinner := tui.StartSpinner("Stopping deployment...")
+			defer spinner.Stop()
 			prompter := newTerminalPrompter()
 			prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 			if err != nil {
@@ -32,12 +35,12 @@ func newStopCmd(providerName *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runStop(cmd.Context(), prov, d.ID)
+			return runStop(cmd.Context(), prov, d.ID, spinner)
 		},
 	}
 }
 
-func runStop(ctx context.Context, prov provider.Provider, id string) error {
+func runStop(ctx context.Context, prov provider.Provider, id string, spinner *tui.Spinner) error {
 	d, err := prov.LoadDeployment(ctx, id)
 	if err != nil {
 		return fmt.Errorf("load deployment: %w", err)
@@ -58,6 +61,9 @@ func runStop(ctx context.Context, prov provider.Provider, id string) error {
 		return fmt.Errorf("save deployment: %w", err)
 	}
 
-	fmt.Printf("Deployment %s stopped.\n", id)
+	if spinner != nil {
+		spinner.Stop()
+	}
+	fmt.Printf("Deployment \033[33m%s\033[0m stopped.\n", id)
 	return nil
 }

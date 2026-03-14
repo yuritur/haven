@@ -61,9 +61,9 @@ func runDestroy(ctx context.Context, prov provider.Provider, deploymentID string
 	}
 
 	if err := prov.DeleteDeployment(ctx, deploymentID); err != nil {
-		fmt.Printf("Warning: failed to delete state for %s: %v\n", deploymentID, err)
+		fmt.Printf("Warning: failed to delete state for \033[33m%s\033[0m: %v\n", deploymentID, err)
 	}
 
-	fmt.Printf("\nDestroyed %s. All resources released.\n", deploymentID)
+	fmt.Printf("\nDestroyed \033[33m%s\033[0m. All resources released.\n", deploymentID)
 	return nil
 }
