@@ -77,6 +77,16 @@ type Provider interface {
 	Start(ctx context.Context, instanceID string) error
 }
 
+type CostEstimate struct {
+	Total  float64
+	Uptime time.Duration
+}
+
+type CostEstimator interface {
+	EstimateCost(ctx context.Context, d Deployment) (*CostEstimate, error)
+	ProjectCost(ctx context.Context, d Deployment) (*CostEstimate, error)
+}
+
 type ActualCost struct {
 	Total    float64
 	Currency string

@@ -2,7 +2,6 @@ package pricing
 
 import (
 	"fmt"
-	"math"
 	"time"
 )
 
@@ -30,7 +29,7 @@ const (
 	avgHoursMonth = 730.0
 )
 
-func RunningHours(createdAt, now time.Time, accumulatedStopHours float64, stoppedAt *time.Time) float64 {
+func CalcRunningHours(createdAt, now time.Time, accumulatedStopHours float64, stoppedAt *time.Time) float64 {
 	total := now.Sub(createdAt).Hours()
 	stopped := accumulatedStopHours
 	if stoppedAt != nil {
@@ -43,11 +42,14 @@ func RunningHours(createdAt, now time.Time, accumulatedStopHours float64, stoppe
 	return running
 }
 
-func Calculate(instanceType string, ebsGB int, runningHours float64, totalHours float64) (CostBreakdown, error) {
+func CalcCurrent(instanceType string, ebsGB int, createdAt, now time.Time, accumulatedStopHours float64, stoppedAt *time.Time) (CostBreakdown, error) {
 	hourly, ok := ec2Prices[instanceType]
 	if !ok {
 		return CostBreakdown{}, fmt.Errorf("unknown instance type %q — cost estimate unavailable", instanceType)
 	}
+
+	totalHours := now.Sub(createdAt).Hours()
+	runningHours := CalcRunningHours(createdAt, now, accumulatedStopHours, stoppedAt)
 
 	ec2 := hourly * runningHours
 	ebs := ebsPerGBMonth * float64(ebsGB) * (totalHours / avgHoursMonth)
@@ -62,7 +64,7 @@ func Calculate(instanceType string, ebsGB int, runningHours float64, totalHours 
 	}, nil
 }
 
-func Projected(instanceType string, ebsGB int, createdAt, now time.Time, accumulatedStopHours float64, stoppedAt *time.Time) (CostBreakdown, error) {
+func CalcProjected(instanceType string, ebsGB int, createdAt, now time.Time, accumulatedStopHours float64, stoppedAt *time.Time) (CostBreakdown, error) {
 	hourly, ok := ec2Prices[instanceType]
 	if !ok {
 		return CostBreakdown{}, fmt.Errorf("unknown instance type %q — cost estimate unavailable", instanceType)
@@ -84,7 +86,7 @@ func Projected(instanceType string, ebsGB int, createdAt, now time.Time, accumul
 	}
 
 	// Running hours so far within the current month
-	running := RunningHours(effectiveStart, now, stopHoursThisMonth, stoppedAt)
+	running := CalcRunningHours(effectiveStart, now, stopHoursThisMonth, stoppedAt)
 
 	var projectedEC2Hours float64
 	if stoppedAt != nil {
@@ -107,25 +109,4 @@ func Projected(instanceType string, ebsGB int, createdAt, now time.Time, accumul
 		EIP:   eip,
 		Total: ec2 + ebs + eip,
 	}, nil
-}
-
-func FormatUSD(amount float64) string {
-	if amount > 0 && amount < 0.01 {
-		return "$0.01"
-	}
-	return fmt.Sprintf("$%.2f", math.Round(amount*100)/100)
-}
-
-func FormatDuration(d time.Duration) string {
-	days := int(d.Hours()) / 24
-	hours := int(d.Hours()) % 24
-	minutes := int(d.Minutes()) % 60
-
-	if days > 0 {
-		return fmt.Sprintf("%dd %dh %dm", days, hours, minutes)
-	}
-	if hours > 0 {
-		return fmt.Sprintf("%dh %dm", hours, minutes)
-	}
-	return fmt.Sprintf("%dm", minutes)
 }

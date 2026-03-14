@@ -8,6 +8,7 @@ import (
 )
 
 var _ provider.Provider = (*Provider)(nil)
+var _ provider.CostEstimator = (*Provider)(nil)
 var _ provider.Prompter = (*Prompter)(nil)
 
 type Provider struct {
@@ -21,6 +22,8 @@ type Provider struct {
 	DestroyFn          func(ctx context.Context, providerRef string) error
 	StopFn             func(ctx context.Context, instanceID string) error
 	StartFn            func(ctx context.Context, instanceID string) error
+	EstimateCostFn     func(ctx context.Context, d provider.Deployment) (*provider.CostEstimate, error)
+	ProjectCostFn      func(ctx context.Context, d provider.Deployment) (*provider.CostEstimate, error)
 }
 
 func (m *Provider) Identity(ctx context.Context) (provider.Identity, error) {
@@ -63,6 +66,20 @@ func (m *Provider) Start(ctx context.Context, instanceID string) error {
 		return errors.New("mock: StartFn not configured")
 	}
 	return m.StartFn(ctx, instanceID)
+}
+
+func (m *Provider) EstimateCost(ctx context.Context, d provider.Deployment) (*provider.CostEstimate, error) {
+	if m.EstimateCostFn == nil {
+		return nil, errors.New("mock: EstimateCostFn not configured")
+	}
+	return m.EstimateCostFn(ctx, d)
+}
+
+func (m *Provider) ProjectCost(ctx context.Context, d provider.Deployment) (*provider.CostEstimate, error) {
+	if m.ProjectCostFn == nil {
+		return nil, errors.New("mock: ProjectCostFn not configured")
+	}
+	return m.ProjectCostFn(ctx, d)
 }
 
 func (m *Provider) List(ctx context.Context) ([]provider.Deployment, error) {

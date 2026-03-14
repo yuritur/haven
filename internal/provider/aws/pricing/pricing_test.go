@@ -12,51 +12,56 @@ func approxEqual(a, b, epsilon float64) bool {
 	return math.Abs(a-b) < epsilon
 }
 
-func TestCalculate(t *testing.T) {
+func TestCalcCurrent(t *testing.T) {
+	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+
 	tests := []struct {
-		name         string
-		instanceType string
-		ebsGB        int
-		runningHours float64
-		totalHours   float64
-		wantEC2      float64
-		wantEBS      float64
-		wantEIP      float64
-		wantErr      bool
+		name                 string
+		instanceType         string
+		ebsGB                int
+		createdAt            time.Time
+		now                  time.Time
+		accumulatedStopHours float64
+		stoppedAt            *time.Time
+		wantEC2              float64
+		wantEBS              float64
+		wantEIP              float64
+		wantErr              bool
 	}{
 		{
 			name:         "t3.large 24 hours running",
 			instanceType: "t3.large",
 			ebsGB:        30,
-			runningHours: 24,
-			totalHours:   24,
+			createdAt:    base,
+			now:          base.Add(24 * time.Hour),
 			wantEC2:      0.0832 * 24,
 			wantEBS:      0.08 * 30 * (24.0 / 730.0),
 			wantEIP:      0.005 * 24,
 		},
 		{
-			name:         "g5.xlarge 48 hours with 12 hours stopped",
-			instanceType: "g5.xlarge",
-			ebsGB:        100,
-			runningHours: 36,
-			totalHours:   48,
-			wantEC2:      1.006 * 36,
-			wantEBS:      0.08 * 100 * (48.0 / 730.0),
-			wantEIP:      0.005 * 48,
+			name:                 "g5.xlarge 48 hours with 12 hours stopped",
+			instanceType:         "g5.xlarge",
+			ebsGB:                100,
+			createdAt:            base,
+			now:                  base.Add(48 * time.Hour),
+			accumulatedStopHours: 12,
+			wantEC2:              1.006 * 36,
+			wantEBS:              0.08 * 100 * (48.0 / 730.0),
+			wantEIP:              0.005 * 48,
 		},
 		{
 			name:         "unknown instance type",
 			instanceType: "m5.xlarge",
 			ebsGB:        30,
-			runningHours: 24,
-			totalHours:   24,
+			createdAt:    base,
+			now:          base.Add(24 * time.Hour),
 			wantErr:      true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Calculate(tt.instanceType, tt.ebsGB, tt.runningHours, tt.totalHours)
+			got, err := CalcCurrent(tt.instanceType, tt.ebsGB, tt.createdAt, tt.now, tt.accumulatedStopHours, tt.stoppedAt)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -79,7 +84,8 @@ func TestCalculate(t *testing.T) {
 			if !approxEqual(got.Total, wantTotal, 0.001) {
 				t.Errorf("Total = %f, want %f", got.Total, wantTotal)
 			}
-			wantUptime := time.Duration(tt.runningHours * float64(time.Hour))
+			runningHours := tt.now.Sub(tt.createdAt).Hours() - tt.accumulatedStopHours
+			wantUptime := time.Duration(runningHours * float64(time.Hour))
 			if got.Uptime != wantUptime {
 				t.Errorf("Uptime = %v, want %v", got.Uptime, wantUptime)
 			}
@@ -87,7 +93,7 @@ func TestCalculate(t *testing.T) {
 	}
 }
 
-func TestRunningHours(t *testing.T) {
+func TestCalcRunningHours(t *testing.T) {
 	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
@@ -130,7 +136,7 @@ func TestRunningHours(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := RunningHours(tt.createdAt, tt.now, tt.accumulatedStopHours, tt.stoppedAt)
+			got := CalcRunningHours(tt.createdAt, tt.now, tt.accumulatedStopHours, tt.stoppedAt)
 			if !approxEqual(got, tt.want, 0.001) {
 				t.Errorf("RunningHours = %f, want %f", got, tt.want)
 			}
@@ -138,7 +144,7 @@ func TestRunningHours(t *testing.T) {
 	}
 }
 
-func TestProjected(t *testing.T) {
+func TestCalcProjected(t *testing.T) {
 	tests := []struct {
 		name                 string
 		instanceType         string
@@ -158,13 +164,10 @@ func TestProjected(t *testing.T) {
 			createdAt:    time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC),
 			now:          time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC),
 			checkEC2: func(v float64) bool {
-				// 5 days running so far (120h) + remaining to end of March (17 days = 408h)
-				// Mar 15 00:00 to Apr 1 00:00 = 17 days
 				want := 0.0832 * (120 + 408)
 				return approxEqual(v, want, 0.01)
 			},
 			checkEBS: func(v float64) bool {
-				// Full month of March = 31 days = 744 hours
 				want := 0.08 * 30 * (744.0 / 730.0)
 				return approxEqual(v, want, 0.01)
 			},
@@ -177,7 +180,6 @@ func TestProjected(t *testing.T) {
 			now:          time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC),
 			stoppedAt:    timePtr(time.Date(2026, 3, 13, 0, 0, 0, 0, time.UTC)),
 			checkEC2: func(v float64) bool {
-				// RunningHours: total=5*24=120, stopped=now-stoppedAt=2*24=48, running=72h
 				want := 0.0832 * 72
 				return approxEqual(v, want, 0.01)
 			},
@@ -193,9 +195,6 @@ func TestProjected(t *testing.T) {
 			createdAt:    time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC),
 			now:          time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC),
 			checkEC2: func(v float64) bool {
-				// Running from month start Mar 1 to now Mar 10 = 9 days = 216h
-				// Remaining: Mar 10 to Apr 1 = 22 days = 528h
-				// Projected EC2 hours: 216 + 528 = 744
 				want := 0.1664 * 744
 				return approxEqual(v, want, 0.1)
 			},
@@ -208,7 +207,7 @@ func TestProjected(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Projected(tt.instanceType, tt.ebsGB, tt.createdAt, tt.now, tt.accumulatedStopHours, tt.stoppedAt)
+			got, err := CalcProjected(tt.instanceType, tt.ebsGB, tt.createdAt, tt.now, tt.accumulatedStopHours, tt.stoppedAt)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -231,64 +230,9 @@ func TestProjected(t *testing.T) {
 	}
 }
 
-func TestFormatUSD(t *testing.T) {
-	tests := []struct {
-		name   string
-		amount float64
-		want   string
-	}{
-		{"normal amount", 1.234, "$1.23"},
-		{"larger amount", 42.50, "$42.50"},
-		{"tiny amount", 0.005, "$0.01"},
-		{"zero", 0.0, "$0.00"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := FormatUSD(tt.amount)
-			if got != tt.want {
-				t.Errorf("FormatUSD(%f) = %q, want %q", tt.amount, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestFormatDuration(t *testing.T) {
-	tests := []struct {
-		name string
-		d    time.Duration
-		want string
-	}{
-		{
-			"days hours minutes",
-			3*24*time.Hour + 14*time.Hour + 22*time.Minute,
-			"3d 14h 22m",
-		},
-		{
-			"hours and minutes only",
-			14*time.Hour + 22*time.Minute,
-			"14h 22m",
-		},
-		{
-			"minutes only",
-			22 * time.Minute,
-			"22m",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := FormatDuration(tt.d)
-			if got != tt.want {
-				t.Errorf("FormatDuration(%v) = %q, want %q", tt.d, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestRunningHoursNegativeClamping(t *testing.T) {
+func TestCalcRunningHoursNegativeClamping(t *testing.T) {
 	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
-	got := RunningHours(base, base.Add(10*time.Hour), 20, nil)
+	got := CalcRunningHours(base, base.Add(10*time.Hour), 20, nil)
 	if got != 0 {
 		t.Errorf("RunningHours = %f, want 0 (accumulated stop hours exceed total)", got)
 	}
