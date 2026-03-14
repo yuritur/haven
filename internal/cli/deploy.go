@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +19,7 @@ import (
 	"github.com/havenapp/haven/internal/certutil"
 	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
+	"github.com/havenapp/haven/internal/runtime"
 	"github.com/havenapp/haven/internal/tui"
 )
 
@@ -51,6 +51,11 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 
 func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, verbose bool, out io.Writer, prompter provider.Prompter) error {
 	modelCfg, err := models.Lookup(modelName)
+	if err != nil {
+		return err
+	}
+
+	rt, err := runtime.New(modelCfg.Runtime)
 	if err != nil {
 		return err
 	}
@@ -139,7 +144,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("deploy: %w", err)
 	}
 
-	endpoint := fmt.Sprintf("https://%s:11434", result.PublicIP)
+	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, rt.Port())
 
 	deployment := provider.Deployment{
 		ID:             deploymentID,
@@ -172,7 +177,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		pollTimeout = 30 * time.Minute
 	}
 
-	if err := waitForOllama(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
+	if err := rt.WaitForReady(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
 		if spin != nil {
 			spin.Stop()
 		}
@@ -181,7 +186,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 			_ = prov.DeleteDeployment(context.Background(), deploymentID)
 			return nil
 		}
-		return fmt.Errorf("waiting for Ollama: %w\nDeployment %s is saved — run `haven destroy %s` to clean up", err, deploymentID, deploymentID)
+		return fmt.Errorf("waiting for model: %w\nDeployment %s is saved — run `haven destroy %s` to clean up", err, deploymentID, deploymentID)
 	}
 
 	if spin != nil {
@@ -222,58 +227,6 @@ func detectPublicIP() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(body)), nil
-}
-
-func waitForOllama(ctx context.Context, endpoint, model, apiKey, fingerprint string, verbose io.Writer, timeout time.Duration) error {
-	client := &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: certutil.NewPinnedTransport(fingerprint),
-	}
-	deadline := time.Now().Add(timeout)
-
-	for time.Now().Before(deadline) {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		req, err := http.NewRequestWithContext(ctx, "GET", endpoint+"/api/tags", nil)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Fprintf(verbose, "poll: %v\n", err)
-		} else if resp.StatusCode != 200 {
-			resp.Body.Close()
-			fmt.Fprintf(verbose, "poll: status %d\n", resp.StatusCode)
-		} else {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			var tagsResp struct {
-				Models []struct {
-					Name string `json:"name"`
-				} `json:"models"`
-			}
-			if json.Unmarshal(body, &tagsResp) == nil {
-				for _, m := range tagsResp.Models {
-					if m.Name == model {
-						return nil
-					}
-				}
-			}
-			fmt.Fprintf(verbose, "poll: model not yet in /api/tags\n")
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(10 * time.Second):
-		}
-	}
-	return fmt.Errorf("timed out after %v", timeout)
 }
 
 func generateAPIKey() (string, error) {
