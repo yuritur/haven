@@ -17,7 +17,7 @@ func TestRunStatus_Empty(t *testing.T) {
 		},
 	}
 
-	err := runStatus(context.Background(), prov)
+	err := runStatus(context.Background(), prov, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestRunStatus_Multiple(t *testing.T) {
 		},
 	}
 
-	err := runStatus(context.Background(), prov)
+	err := runStatus(context.Background(), prov, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestRunStatus_ListError(t *testing.T) {
 		},
 	}
 
-	err := runStatus(context.Background(), prov)
+	err := runStatus(context.Background(), prov, nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

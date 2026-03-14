@@ -9,6 +9,7 @@ import (
 
 	"github.com/havenapp/haven/internal/format"
 	"github.com/havenapp/haven/internal/provider"
+	"github.com/havenapp/haven/internal/tui"
 )
 
 func newStatusCmd(providerName *string) *cobra.Command {
@@ -17,19 +18,25 @@ func newStatusCmd(providerName *string) *cobra.Command {
 		Short: "List active deployments",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			spinner := tui.StartSpinner("Loading deployments...")
+			defer spinner.Stop()
 			prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 			if err != nil {
 				return err
 			}
-			return runStatus(cmd.Context(), prov)
+			return runStatus(cmd.Context(), prov, spinner)
 		},
 	}
 }
 
-func runStatus(ctx context.Context, prov provider.Provider) error {
+func runStatus(ctx context.Context, prov provider.Provider, spinner *tui.Spinner) error {
 	deployments, err := prov.List(ctx)
 	if err != nil {
 		return fmt.Errorf("list deployments: %w", err)
+	}
+
+	if spinner != nil {
+		spinner.Stop()
 	}
 
 	if len(deployments) == 0 {
