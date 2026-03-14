@@ -4,6 +4,8 @@ import (
 	"math"
 	"testing"
 	"time"
+
+	"github.com/havenapp/haven/internal/models"
 )
 
 func approxEqual(a, b, epsilon float64) bool {
@@ -183,10 +185,10 @@ func TestProjected(t *testing.T) {
 			createdAt:    time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC),
 			now:          time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC),
 			checkEC2: func(v float64) bool {
-				// Running since Feb 20, now Mar 10 = 18 days = 432h total running
+				// Running from month start Mar 1 to now Mar 10 = 9 days = 216h
 				// Remaining: Mar 10 to Apr 1 = 22 days = 528h
-				// Projected EC2 hours: 432 + 528 = 960
-				want := 0.1664 * 960
+				// Projected EC2 hours: 216 + 528 = 744
+				want := 0.1664 * 744
 				return approxEqual(v, want, 0.1)
 			},
 			checkEBS: func(v float64) bool {
@@ -273,6 +275,22 @@ func TestFormatDuration(t *testing.T) {
 				t.Errorf("FormatDuration(%v) = %q, want %q", tt.d, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestRunningHoursNegativeClamping(t *testing.T) {
+	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	got := RunningHours(base, base.Add(10*time.Hour), 20, nil)
+	if got != 0 {
+		t.Errorf("RunningHours = %f, want 0 (accumulated stop hours exceed total)", got)
+	}
+}
+
+func TestAllRegisteredInstanceTypesHavePrices(t *testing.T) {
+	for _, cfg := range models.List() {
+		if _, ok := ec2Prices[cfg.InstanceType]; !ok {
+			t.Errorf("model registry uses %q but pricing has no rate", cfg.InstanceType)
+		}
 	}
 }
 

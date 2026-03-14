@@ -66,11 +66,18 @@ func Projected(instanceType string, ebsGB int, createdAt, now time.Time, accumul
 		return CostBreakdown{}, fmt.Errorf("unknown instance type %q — cost estimate unavailable", instanceType)
 	}
 
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	monthEnd := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location())
-	monthHours := monthEnd.Sub(time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())).Hours()
+	monthHours := monthEnd.Sub(monthStart).Hours()
 
-	// Running hours so far
-	running := RunningHours(createdAt, now, accumulatedStopHours, stoppedAt)
+	// Use month start as effective start if deployment predates current month
+	effectiveStart := createdAt
+	if createdAt.Before(monthStart) {
+		effectiveStart = monthStart
+	}
+
+	// Running hours so far within the current month
+	running := RunningHours(effectiveStart, now, accumulatedStopHours, stoppedAt)
 
 	var projectedEC2Hours float64
 	if stoppedAt != nil {
