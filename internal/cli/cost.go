@@ -12,6 +12,7 @@ import (
 	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/pricing"
 	"github.com/havenapp/haven/internal/provider"
+	"github.com/havenapp/haven/internal/tui"
 )
 
 func newCostCmd(providerName *string) *cobra.Command {
@@ -25,6 +26,8 @@ func newCostCmd(providerName *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&projected, "projected", false, "Show projected cost to end of month")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		spinner := tui.StartSpinner("Loading cost...")
+		defer spinner.Stop()
 		prompter := newTerminalPrompter()
 		prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 		if err != nil {
@@ -38,12 +41,12 @@ func newCostCmd(providerName *string) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		return runCost(cmd.Context(), prov, d.ID, projected, cmd.OutOrStdout())
+		return runCost(cmd.Context(), prov, d.ID, projected, cmd.OutOrStdout(), spinner)
 	}
 	return cmd
 }
 
-func runCost(ctx context.Context, prov provider.Provider, id string, projected bool, w io.Writer) error {
+func runCost(ctx context.Context, prov provider.Provider, id string, projected bool, w io.Writer, spinner *tui.Spinner) error {
 	d, err := prov.LoadDeployment(ctx, id)
 	if err != nil {
 		return fmt.Errorf("load deployment: %w", err)
@@ -90,6 +93,9 @@ func runCost(ctx context.Context, prov provider.Provider, id string, projected b
 		}
 	}
 
+	if spinner != nil {
+		spinner.Stop()
+	}
 	fmt.Fprint(w, buf.String())
 	return nil
 }

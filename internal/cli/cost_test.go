@@ -26,7 +26,7 @@ func TestRunCost_Basic(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, "haven-a1b2c3d4", false, &buf)
+	err := runCost(context.Background(), prov, "haven-a1b2c3d4", false, &buf, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestRunCost_Projected(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, "haven-a1b2c3d4", true, &buf)
+	err := runCost(context.Background(), prov, "haven-a1b2c3d4", true, &buf, nil)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestRunCost_NotFound(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, "nonexistent", false, &buf)
+	err := runCost(context.Background(), prov, "nonexistent", false, &buf, nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -91,7 +91,7 @@ func TestRunCost_UnknownInstanceType(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, "haven-a1b2c3d4", false, &buf)
+	err := runCost(context.Background(), prov, "haven-a1b2c3d4", false, &buf, nil)
 	if err != nil {
 		t.Fatalf("expected no error (warning only), got: %v", err)
 	}
