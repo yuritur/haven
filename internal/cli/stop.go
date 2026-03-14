@@ -13,20 +13,26 @@ import (
 
 func newStopCmd(providerName *string) *cobra.Command {
 	return &cobra.Command{
-		Use:   "stop <deployment-id>",
-		Short: "Stop a running deployment",
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return fmt.Errorf("deployment ID is required\n\nUsage: haven stop <deployment-id>")
-			}
-			return cobra.ExactArgs(1)(cmd, args)
-		},
+		Use:     "stop [deployment-id]",
+		Short:   "Stop a running deployment",
+		Long:    "Stop a running deployment.\nIf only one deployment exists, it is selected automatically.",
+		Example: "  haven stop\n  haven stop haven-a1b2c3d4",
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			prompter := newTerminalPrompter()
 			prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 			if err != nil {
 				return err
 			}
-			return runStop(cmd.Context(), prov, args[0])
+			var id string
+			if len(args) == 1 {
+				id = args[0]
+			}
+			d, err := resolveDeployment(cmd.Context(), prov, prompter, id)
+			if err != nil {
+				return err
+			}
+			return runStop(cmd.Context(), prov, d.ID)
 		},
 	}
 }

@@ -17,22 +17,28 @@ import (
 func newCostCmd(providerName *string) *cobra.Command {
 	var projected bool
 	cmd := &cobra.Command{
-		Use:   "cost <deployment-id>",
-		Short: "Show estimated cost for a deployment",
-		Args: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
-				return fmt.Errorf("deployment ID is required\n\nUsage: haven cost <deployment-id>")
-			}
-			return cobra.ExactArgs(1)(cmd, args)
-		},
+		Use:     "cost [deployment-id]",
+		Short:   "Show estimated cost for a deployment",
+		Long:    "Show estimated cost for a deployment.\nIf only one deployment exists, it is selected automatically.",
+		Example: "  haven cost\n  haven cost haven-a1b2c3d4",
+		Args:    cobra.MaximumNArgs(1),
 	}
 	cmd.Flags().BoolVar(&projected, "projected", false, "Show projected cost to end of month")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		prompter := newTerminalPrompter()
 		prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 		if err != nil {
 			return err
 		}
-		return runCost(cmd.Context(), prov, args[0], projected, cmd.OutOrStdout())
+		var id string
+		if len(args) == 1 {
+			id = args[0]
+		}
+		d, err := resolveDeployment(cmd.Context(), prov, prompter, id)
+		if err != nil {
+			return err
+		}
+		return runCost(cmd.Context(), prov, d.ID, projected, cmd.OutOrStdout())
 	}
 	return cmd
 }

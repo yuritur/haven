@@ -38,6 +38,7 @@ func newChatCmd(providerName *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "chat [deployment-id]",
 		Short:   "Interactive chat with a deployed model",
+		Long:    "Interactive chat with a deployed model.\nIf only one deployment exists, it is selected automatically.",
 		Example: "  haven chat\n  haven chat haven-a1b2c3d4",
 		Args:    cobra.MaximumNArgs(1),
 	}
