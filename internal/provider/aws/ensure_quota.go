@@ -13,7 +13,7 @@ import (
 	"github.com/havenapp/haven/internal/tui"
 )
 
-func (p *AWSProvider) EnsureQuota(ctx context.Context, instanceType string, promptFn func(string) string) error {
+func (p *AWSProvider) EnsureQuota(ctx context.Context, instanceType string, prompter provider.Prompter) error {
 	if !models.IsGPUInstance(instanceType) {
 		return nil
 	}
@@ -28,7 +28,7 @@ func (p *AWSProvider) EnsureQuota(ctx context.Context, instanceType string, prom
 		return err
 	}
 	if existing != nil {
-		return p.handleExistingQuotaRequest(ctx, existing, promptFn)
+		return p.handleExistingQuotaRequest(ctx, existing, prompter)
 	}
 
 	status, err := quota.CheckQuota(ctx, p.cfg, instanceType)
@@ -41,7 +41,7 @@ func (p *AWSProvider) EnsureQuota(ctx context.Context, instanceType string, prom
 		return nil
 	}
 
-	return p.handleInsufficientQuota(ctx, status, instanceType, promptFn)
+	return p.handleInsufficientQuota(ctx, status, instanceType, prompter)
 }
 
 func (p *AWSProvider) resolveTerminalStatus(ctx context.Context, status string, quotaCode string) (proceed bool, terminal bool) {
@@ -60,7 +60,7 @@ func (p *AWSProvider) resolveTerminalStatus(ctx context.Context, status string, 
 	}
 }
 
-func (p *AWSProvider) handleExistingQuotaRequest(ctx context.Context, req *quota.QuotaRequest, promptFn func(string) string) error {
+func (p *AWSProvider) handleExistingQuotaRequest(ctx context.Context, req *quota.QuotaRequest, prompter provider.Prompter) error {
 	status, err := quota.GetRequestStatus(ctx, p.cfg, req.RequestID)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not check quota request status: %v\n", err)
@@ -77,7 +77,7 @@ func (p *AWSProvider) handleExistingQuotaRequest(ctx context.Context, req *quota
 
 	fmt.Printf("A GPU quota increase request is pending (status: %s, submitted: %s).\n",
 		status, req.CreatedAt.Format(time.RFC3339))
-	choice := promptFn("\033[33mWait for approval? [Y/n]:\033[0m ")
+	choice := prompter.Input("\033[33mWait for approval? [Y/n]:\033[0m ")
 	choice = strings.TrimSpace(strings.ToLower(choice))
 	if choice == "n" || choice == "no" {
 		fmt.Println("Run `haven deploy` again when the quota is approved.")
@@ -86,7 +86,7 @@ func (p *AWSProvider) handleExistingQuotaRequest(ctx context.Context, req *quota
 	return p.waitForQuotaApproval(ctx, req.RequestID, req.QuotaCode)
 }
 
-func (p *AWSProvider) handleInsufficientQuota(ctx context.Context, status *quota.QuotaStatus, instanceType string, promptFn func(string) string) error {
+func (p *AWSProvider) handleInsufficientQuota(ctx context.Context, status *quota.QuotaStatus, instanceType string, prompter provider.Prompter) error {
 	fmt.Printf("\nYour AWS account has %.0f vCPU quota for this instance family (%d required for %s).\n",
 		status.CurrentVCPUs, status.RequiredVCPUs, instanceType)
 
@@ -100,7 +100,7 @@ func (p *AWSProvider) handleInsufficientQuota(ctx context.Context, status *quota
 	fmt.Println("  [1] I'll request the increase myself")
 	fmt.Println("  [2] Let Haven request it (may take minutes to hours)")
 
-	choice := promptFn("\n\033[33mChoice [1/2]:\033[0m ")
+	choice := prompter.Input("\n\033[33mChoice [1/2]:\033[0m ")
 	choice = strings.TrimSpace(choice)
 
 	switch choice {

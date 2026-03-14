@@ -44,16 +44,12 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			promptFn := func(msg string) string {
-				fmt.Print(msg)
-				return prompter.Input("")
-			}
-			return runDeploy(cmd.Context(), prov, *providerName, args[0], *verbose, out, promptFn)
+			return runDeploy(cmd.Context(), prov, *providerName, args[0], *verbose, out, prompter)
 		},
 	}
 }
 
-func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, verbose bool, out io.Writer, promptFn func(string) string) error {
+func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, verbose bool, out io.Writer, prompter provider.Prompter) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
@@ -88,15 +84,12 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("generate deployment ID: %w", err)
 	}
 
-	if ensurer, ok := prov.(interface {
-		EnsureQuota(ctx context.Context, instanceType string, promptFn func(string) string) error
-	}); ok {
-		if err := ensurer.EnsureQuota(ctx, modelCfg.InstanceType, promptFn); err != nil {
-			if errors.Is(err, provider.ErrQuotaUserExit) {
-				return nil
-			}
-			return err
-		}
+	err = prov.EnsureQuota(ctx, modelCfg.InstanceType, prompter)
+	switch {
+	case errors.Is(err, provider.ErrQuotaUserExit):
+		return nil
+	case err != nil:
+		return err
 	}
 
 	fmt.Printf("\033[33mDeploying\033[0m %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)

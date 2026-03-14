@@ -70,6 +70,7 @@ type Provider interface {
 	LoadDeployment(ctx context.Context, id string) (*Deployment, error)
 	SaveDeployment(ctx context.Context, d Deployment) error
 	DeleteDeployment(ctx context.Context, id string) error
+	EnsureQuota(ctx context.Context, instanceType string, prompter Prompter) error
 	Deploy(ctx context.Context, input DeployInput) (DeployResult, error)
 	Destroy(ctx context.Context, providerRef string) error
 	Stop(ctx context.Context, instanceID string) error

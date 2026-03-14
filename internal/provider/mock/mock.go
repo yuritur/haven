@@ -16,6 +16,7 @@ type Provider struct {
 	LoadDeploymentFn   func(ctx context.Context, id string) (*provider.Deployment, error)
 	SaveDeploymentFn   func(ctx context.Context, d provider.Deployment) error
 	DeleteDeploymentFn func(ctx context.Context, id string) error
+	EnsureQuotaFn      func(ctx context.Context, instanceType string, prompter provider.Prompter) error
 	DeployFn           func(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error)
 	DestroyFn          func(ctx context.Context, providerRef string) error
 	StopFn             func(ctx context.Context, instanceID string) error
@@ -27,6 +28,13 @@ func (m *Provider) Identity(ctx context.Context) (provider.Identity, error) {
 		return provider.Identity{}, errors.New("mock: IdentityFn not configured")
 	}
 	return m.IdentityFn(ctx)
+}
+
+func (m *Provider) EnsureQuota(ctx context.Context, instanceType string, prompter provider.Prompter) error {
+	if m.EnsureQuotaFn == nil {
+		return nil
+	}
+	return m.EnsureQuotaFn(ctx, instanceType, prompter)
 }
 
 func (m *Provider) Deploy(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error) {
@@ -83,17 +91,6 @@ func (m *Provider) DeleteDeployment(ctx context.Context, id string) error {
 		return errors.New("mock: DeleteDeploymentFn not configured")
 	}
 	return m.DeleteDeploymentFn(ctx, id)
-}
-
-type QuotaEnsurer struct {
-	EnsureQuotaFn func(ctx context.Context, instanceType string, promptFn func(string) string) error
-}
-
-func (m *QuotaEnsurer) EnsureQuota(ctx context.Context, instanceType string, promptFn func(string) string) error {
-	if m.EnsureQuotaFn == nil {
-		return errors.New("mock: EnsureQuotaFn not configured")
-	}
-	return m.EnsureQuotaFn(ctx, instanceType, promptFn)
 }
 
 type Prompter struct {
