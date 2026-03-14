@@ -18,10 +18,7 @@ func TestRunDestroy_Success(t *testing.T) {
 			destroyCalled = true
 			return nil
 		},
-	}
-
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:           "haven-test1234",
 				ProviderRef:  "stack-test",
@@ -29,13 +26,13 @@ func TestRunDestroy_Success(t *testing.T) {
 				InstanceType: "t3.large",
 			}, nil
 		},
-		DeleteFn: func(ctx context.Context, id string) error {
+		DeleteDeploymentFn: func(ctx context.Context, id string) error {
 			deleteCalled = true
 			return nil
 		},
 	}
 
-	err := runDestroy(context.Background(), prov, store, "haven-test1234", true)
+	err := runDestroy(context.Background(), prov, "haven-test1234", true)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -55,15 +52,12 @@ func TestRunDestroy_NotFound(t *testing.T) {
 			destroyCalled = true
 			return nil
 		},
-	}
-
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return nil, fmt.Errorf("deployment not found")
 		},
 	}
 
-	err := runDestroy(context.Background(), prov, store, "nonexistent", true)
+	err := runDestroy(context.Background(), prov, "nonexistent", true)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -79,10 +73,7 @@ func TestRunDestroy_DestroyFails(t *testing.T) {
 		DestroyFn: func(ctx context.Context, providerRef string) error {
 			return fmt.Errorf("cloud API error")
 		},
-	}
-
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:           "haven-test1234",
 				ProviderRef:  "stack-test",
@@ -90,13 +81,13 @@ func TestRunDestroy_DestroyFails(t *testing.T) {
 				InstanceType: "t3.large",
 			}, nil
 		},
-		DeleteFn: func(ctx context.Context, id string) error {
+		DeleteDeploymentFn: func(ctx context.Context, id string) error {
 			deleteCalled = true
 			return nil
 		},
 	}
 
-	err := runDestroy(context.Background(), prov, store, "haven-test1234", true)
+	err := runDestroy(context.Background(), prov, "haven-test1234", true)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

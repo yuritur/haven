@@ -10,6 +10,7 @@ import (
 
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/provider/aws/quota"
+	"github.com/havenapp/haven/internal/provider/mock"
 )
 
 func testProvider(region string) *AWSProvider {
@@ -77,11 +78,9 @@ func TestHandleInsufficientQuota_ManualChoice(t *testing.T) {
 		QuotaCode:     "L-DB2BBE81",
 	}
 
-	promptFn := func(msg string) string {
-		return "1"
-	}
+	prompter := &mock.Prompter{InputFn: func(string) string { return "1" }}
 
-	err := p.handleInsufficientQuota(context.Background(), status, "g4dn.xlarge", promptFn)
+	err := p.handleInsufficientQuota(context.Background(), status, "g4dn.xlarge", prompter)
 	if !errors.Is(err, provider.ErrQuotaUserExit) {
 		t.Fatalf("expected ErrQuotaUserExit, got: %v", err)
 	}
@@ -98,11 +97,9 @@ func TestHandleInsufficientQuota_DefaultChoice(t *testing.T) {
 	}
 
 	// Any non-"2" value should fall through to manual instructions
-	promptFn := func(msg string) string {
-		return ""
-	}
+	prompter := &mock.Prompter{InputFn: func(string) string { return "" }}
 
-	err := p.handleInsufficientQuota(context.Background(), status, "g4dn.xlarge", promptFn)
+	err := p.handleInsufficientQuota(context.Background(), status, "g4dn.xlarge", prompter)
 	if !errors.Is(err, provider.ErrQuotaUserExit) {
 		t.Fatalf("expected ErrQuotaUserExit, got: %v", err)
 	}

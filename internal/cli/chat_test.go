@@ -12,8 +12,8 @@ import (
 
 func TestResolveDeployment_ByID(t *testing.T) {
 	d := &provider.Deployment{ID: "haven-aaaa1111", Model: "llama3.2:1b"}
-	store := &mock.StateStore{
-		LoadFn: func(_ context.Context, id string) (*provider.Deployment, error) {
+	store := &mock.Provider{
+		LoadDeploymentFn: func(_ context.Context, id string) (*provider.Deployment, error) {
 			if id == "haven-aaaa1111" {
 				return d, nil
 			}
@@ -31,8 +31,8 @@ func TestResolveDeployment_ByID(t *testing.T) {
 }
 
 func TestResolveDeployment_ByID_NotFound(t *testing.T) {
-	store := &mock.StateStore{
-		LoadFn: func(_ context.Context, id string) (*provider.Deployment, error) {
+	store := &mock.Provider{
+		LoadDeploymentFn: func(_ context.Context, id string) (*provider.Deployment, error) {
 			return nil, fmt.Errorf("not found")
 		},
 	}
@@ -44,7 +44,7 @@ func TestResolveDeployment_ByID_NotFound(t *testing.T) {
 }
 
 func TestResolveDeployment_ZeroDeployments(t *testing.T) {
-	store := &mock.StateStore{
+	store := &mock.Provider{
 		ListFn: func(_ context.Context) ([]provider.Deployment, error) {
 			return []provider.Deployment{}, nil
 		},
@@ -60,7 +60,7 @@ func TestResolveDeployment_ZeroDeployments(t *testing.T) {
 }
 
 func TestResolveDeployment_SingleDeployment(t *testing.T) {
-	store := &mock.StateStore{
+	store := &mock.Provider{
 		ListFn: func(_ context.Context) ([]provider.Deployment, error) {
 			return []provider.Deployment{
 				{ID: "haven-aaaa1111", Model: "llama3.2:1b"},
@@ -78,7 +78,7 @@ func TestResolveDeployment_SingleDeployment(t *testing.T) {
 }
 
 func TestResolveDeployment_MultipleDeployments(t *testing.T) {
-	store := &mock.StateStore{
+	store := &mock.Provider{
 		ListFn: func(_ context.Context) ([]provider.Deployment, error) {
 			return []provider.Deployment{
 				{ID: "haven-aaaa1111", Model: "llama3.2:1b"},
@@ -102,7 +102,7 @@ func TestResolveDeployment_MultipleDeployments(t *testing.T) {
 }
 
 func TestResolveDeployment_SelectCancelled(t *testing.T) {
-	store := &mock.StateStore{
+	store := &mock.Provider{
 		ListFn: func(_ context.Context) ([]provider.Deployment, error) {
 			return []provider.Deployment{
 				{ID: "haven-aaaa1111", Model: "llama3.2:1b"},

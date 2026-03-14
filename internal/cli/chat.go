@@ -38,12 +38,13 @@ func newChatCmd(providerName *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "chat [deployment-id]",
 		Short:   "Interactive chat with a deployed model",
+		Long:    "Interactive chat with a deployed model.\nIf only one deployment exists, it is selected automatically.",
 		Example: "  haven chat\n  haven chat haven-a1b2c3d4",
 		Args:    cobra.MaximumNArgs(1),
 	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		prompter := newTerminalPrompter()
-		_, store, err := buildProvider(cmd.Context(), *providerName, io.Discard)
+		prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 		if err != nil {
 			return err
 		}
@@ -51,13 +52,13 @@ func newChatCmd(providerName *string) *cobra.Command {
 		if len(args) == 1 {
 			id = args[0]
 		}
-		return runChat(cmd.Context(), store, prompter, id)
+		return runChat(cmd.Context(), prov, prompter, id)
 	}
 	return cmd
 }
 
-func runChat(ctx context.Context, store provider.StateStore, prompter provider.Prompter, id string) error {
-	d, err := resolveDeployment(ctx, store, prompter, id)
+func runChat(ctx context.Context, prov provider.Provider, prompter provider.Prompter, id string) error {
+	d, err := resolveDeployment(ctx, prov, prompter, id)
 	if err != nil {
 		return err
 	}
@@ -109,16 +110,16 @@ func runChat(ctx context.Context, store provider.StateStore, prompter provider.P
 	}
 }
 
-func resolveDeployment(ctx context.Context, store provider.StateStore, prompter provider.Prompter, id string) (*provider.Deployment, error) {
+func resolveDeployment(ctx context.Context, prov provider.Provider, prompter provider.Prompter, id string) (*provider.Deployment, error) {
 	if id != "" {
-		d, err := store.Load(ctx, id)
+		d, err := prov.LoadDeployment(ctx, id)
 		if err != nil {
 			return nil, fmt.Errorf("load deployment: %w", err)
 		}
 		return d, nil
 	}
 
-	deployments, err := store.List(ctx)
+	deployments, err := prov.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list deployments: %w", err)
 	}

@@ -24,7 +24,7 @@ func StartSpinner(msg string) *Spinner {
 }
 
 func (s *Spinner) run() {
-	frames := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	frames := []string{"∙", "●"}
 	ticker := time.NewTicker(80 * time.Millisecond)
 	defer ticker.Stop()
 	i := 0
@@ -35,7 +35,7 @@ func (s *Spinner) run() {
 			close(s.doneC)
 			return
 		case <-ticker.C:
-			fmt.Printf("\r\033[33m%s\033[0m  %s", frames[i%len(frames)], s.msg)
+			fmt.Printf("\r\033[33m%s\033[0m  %s", frames[i%2], s.msg)
 			i++
 		}
 	}

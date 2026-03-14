@@ -13,7 +13,6 @@ import (
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 
 	"github.com/havenapp/haven/internal/provider"
-	"github.com/havenapp/haven/internal/provider/aws/quota"
 )
 
 type authResult struct {
@@ -22,25 +21,61 @@ type authResult struct {
 	profile  string
 }
 
-func Login(ctx context.Context, prompter provider.Prompter, out io.Writer) (provider.Provider, provider.StateStore, error) {
+func authenticate(ctx context.Context, out io.Writer) (*authResult, error) {
+	sess, err := LoadSession()
+	if err != nil {
+		return nil, provider.ErrNotLoggedIn
+	}
+
+	var ar *authResult
+	if sess.Profile == "" {
+		ar, err = resolveDefault(ctx)
+	} else {
+		ar, err = resolveProfile(ctx, sess.Profile)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%w: session expired or credentials invalid", provider.ErrNotLoggedIn)
+	}
+
+	if ar.identity.AccountID != sess.AccountID {
+		return nil, fmt.Errorf("%w: account changed (expected %s, got %s)", provider.ErrNotLoggedIn, sess.AccountID, ar.identity.AccountID)
+	}
+
+	return ar, nil
+}
+
+func Login(ctx context.Context, prompter provider.Prompter, out io.Writer) error {
 	ar, err := detectCredentials(ctx)
 	if err != nil {
 		ar, err = onboard(ctx, prompter)
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
-		return loginAndSave(ctx, ar, out)
+
+		return SaveSession(Session{
+			Profile:   ar.profile,
+			AccountID: ar.identity.AccountID,
+			Region:    ar.identity.Region,
+		})
 	}
 
 	if confirmIdentity(prompter, ar.identity) {
-		return loginAndSave(ctx, ar, out)
+		return SaveSession(Session{
+			Profile:   ar.profile,
+			AccountID: ar.identity.AccountID,
+			Region:    ar.identity.Region,
+		})
 	}
 
 	ar, err = switchProfile(ctx, prompter)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	return loginAndSave(ctx, ar, out)
+	return SaveSession(Session{
+		Profile:   ar.profile,
+		AccountID: ar.identity.AccountID,
+		Region:    ar.identity.Region,
+	})
 }
 
 func detectCredentials(ctx context.Context) (*authResult, error) {
@@ -331,32 +366,4 @@ func parseINISections(path string) []string {
 		}
 	}
 	return sections
-}
-
-func loginAndSave(ctx context.Context, ar *authResult, out io.Writer) (provider.Provider, provider.StateStore, error) {
-	if err := SaveSession(Session{
-		Provider:  "aws",
-		Profile:   ar.profile,
-		AccountID: ar.identity.AccountID,
-		Region:    ar.identity.Region,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("save session: %w", err)
-	}
-	return initFromResult(ctx, ar, out)
-}
-
-func initFromResult(ctx context.Context, pr *authResult, out io.Writer) (provider.Provider, provider.StateStore, error) {
-	store, err := newS3StateStore(ctx, pr.cfg, pr.identity.AccountID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	p := &AWSProvider{
-		cfg:        pr.cfg,
-		out:        out,
-		bucketName: store.bucketName,
-		quotaStore: quota.NewStore(pr.cfg, store.bucketName),
-		identity:   pr.identity,
-	}
-	return p, store, nil
 }

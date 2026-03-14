@@ -16,7 +16,6 @@ func TestSaveLoadSession(t *testing.T) {
 		{
 			name: "round-trip preserves all fields",
 			session: Session{
-				Provider:  "aws",
 				Profile:   "haven",
 				AccountID: "123456789012",
 				Region:    "us-east-1",
@@ -25,7 +24,6 @@ func TestSaveLoadSession(t *testing.T) {
 		{
 			name: "empty profile",
 			session: Session{
-				Provider:  "aws",
 				Profile:   "",
 				AccountID: "999999999999",
 				Region:    "eu-west-1",
@@ -52,7 +50,6 @@ func TestSaveLoadSession(t *testing.T) {
 			name: "overwrite returns latest session",
 			setup: func(t *testing.T, home string) {
 				old := Session{
-					Provider:  "aws",
 					Profile:   "old-profile",
 					AccountID: "111111111111",
 					Region:    "us-west-2",
@@ -62,7 +59,6 @@ func TestSaveLoadSession(t *testing.T) {
 				}
 			},
 			session: Session{
-				Provider:  "aws",
 				Profile:   "new-profile",
 				AccountID: "222222222222",
 				Region:    "ap-southeast-1",
@@ -96,9 +92,6 @@ func TestSaveLoadSession(t *testing.T) {
 				t.Fatalf("LoadSession() error: %v", err)
 			}
 
-			if got.Provider != tt.session.Provider {
-				t.Errorf("Provider = %q, want %q", got.Provider, tt.session.Provider)
-			}
 			if got.Profile != tt.session.Profile {
 				t.Errorf("Profile = %q, want %q", got.Profile, tt.session.Profile)
 			}

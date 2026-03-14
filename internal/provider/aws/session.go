@@ -1,18 +1,13 @@
 package aws
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/havenapp/haven/internal/provider"
 )
 
 type Session struct {
-	Provider  string `json:"provider"`
 	Profile   string `json:"profile"`
 	AccountID string `json:"account_id"`
 	Region    string `json:"region"`
@@ -23,7 +18,7 @@ func sessionPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("find home directory: %w", err)
 	}
-	return filepath.Join(home, ".haven", "session.json"), nil
+	return filepath.Join(home, ".haven", "aws_session.json"), nil
 }
 
 func SaveSession(s Session) error {
@@ -55,27 +50,4 @@ func LoadSession() (*Session, error) {
 		return nil, fmt.Errorf("parse session: %w", err)
 	}
 	return &s, nil
-}
-
-func ResumeSession(ctx context.Context, out io.Writer) (provider.Provider, provider.StateStore, error) {
-	sess, err := LoadSession()
-	if err != nil {
-		return nil, nil, provider.ErrNotLoggedIn
-	}
-
-	var ar *authResult
-	if sess.Profile == "" {
-		ar, err = resolveDefault(ctx)
-	} else {
-		ar, err = resolveProfile(ctx, sess.Profile)
-	}
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: session expired or credentials invalid", provider.ErrNotLoggedIn)
-	}
-
-	if ar.identity.AccountID != sess.AccountID {
-		return nil, nil, fmt.Errorf("%w: account changed (expected %s, got %s)", provider.ErrNotLoggedIn, sess.AccountID, ar.identity.AccountID)
-	}
-
-	return initFromResult(ctx, ar, out)
 }

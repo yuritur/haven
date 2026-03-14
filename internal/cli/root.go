@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -45,6 +46,9 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newStatusCmd(&providerName))
 	root.AddCommand(newCertCmd(&providerName))
 	root.AddCommand(newChatCmd(&providerName))
+	root.AddCommand(newStopCmd(&providerName))
+	root.AddCommand(newStartCmd(&providerName))
+	root.AddCommand(newCostCmd(&providerName))
 
 	return root
 }
@@ -61,15 +65,18 @@ func Execute() {
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "\033[31merror: %v\033[0m\n", err)
+		if strings.Contains(err.Error(), "deployment ID is required") {
+			fmt.Fprintf(os.Stderr, "\n  Run: \033[33mhaven status\033[0m to list deployments\n")
+		}
 		os.Exit(1)
 	}
 }
 
-func buildProvider(ctx context.Context, name string, out io.Writer) (provider.Provider, provider.StateStore, error) {
+func buildProvider(ctx context.Context, name string, out io.Writer) (provider.Provider, error) {
 	switch name {
 	case "aws":
-		return awsprovider.ResumeSession(ctx, out)
+		return awsprovider.Build(ctx, out)
 	default:
-		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
+		return nil, fmt.Errorf("unknown provider %q - available: aws", name)
 	}
 }
