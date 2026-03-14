@@ -48,21 +48,25 @@ func (o *OllamaRuntime) waitForReadyWithClient(ctx context.Context, client *http
 			resp.Body.Close()
 			fmt.Fprintf(verbose, "poll: status %d\n", resp.StatusCode)
 		} else {
-			body, _ := io.ReadAll(resp.Body)
+			body, readErr := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 			resp.Body.Close()
-			var tagsResp struct {
-				Models []struct {
-					Name string `json:"name"`
-				} `json:"models"`
-			}
-			if json.Unmarshal(body, &tagsResp) == nil {
-				for _, m := range tagsResp.Models {
-					if m.Name == model {
-						return nil
+			if readErr != nil {
+				fmt.Fprintf(verbose, "poll: read body: %v\n", readErr)
+			} else {
+				var tagsResp struct {
+					Models []struct {
+						Name string `json:"name"`
+					} `json:"models"`
+				}
+				if json.Unmarshal(body, &tagsResp) == nil {
+					for _, m := range tagsResp.Models {
+						if m.Name == model {
+							return nil
+						}
 					}
 				}
+				fmt.Fprintf(verbose, "poll: model not yet in /api/tags\n")
 			}
-			fmt.Fprintf(verbose, "poll: model not yet in /api/tags\n")
 		}
 		select {
 		case <-ctx.Done():
