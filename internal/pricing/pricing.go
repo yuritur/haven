@@ -26,6 +26,7 @@ var ec2Prices = map[string]float64{
 
 const (
 	ebsPerGBMonth = 0.08
+	eipPerHour    = 0.005
 	avgHoursMonth = 730.0
 )
 
@@ -42,20 +43,21 @@ func RunningHours(createdAt, now time.Time, accumulatedStopHours float64, stoppe
 	return running
 }
 
-func Calculate(instanceType string, ebsGB int, runningHours float64) (CostBreakdown, error) {
+func Calculate(instanceType string, ebsGB int, runningHours float64, totalHours float64) (CostBreakdown, error) {
 	hourly, ok := ec2Prices[instanceType]
 	if !ok {
 		return CostBreakdown{}, fmt.Errorf("unknown instance type %q — cost estimate unavailable", instanceType)
 	}
 
 	ec2 := hourly * runningHours
-	ebs := ebsPerGBMonth * float64(ebsGB) * (runningHours / avgHoursMonth)
+	ebs := ebsPerGBMonth * float64(ebsGB) * (totalHours / avgHoursMonth)
+	eip := eipPerHour * totalHours
 
 	return CostBreakdown{
 		EC2:    ec2,
 		EBS:    ebs,
-		EIP:    0,
-		Total:  ec2 + ebs,
+		EIP:    eip,
+		Total:  ec2 + ebs + eip,
 		Uptime: time.Duration(runningHours * float64(time.Hour)),
 	}, nil
 }
@@ -72,12 +74,17 @@ func Projected(instanceType string, ebsGB int, createdAt, now time.Time, accumul
 
 	// Use month start as effective start if deployment predates current month
 	effectiveStart := createdAt
+	var stopHoursThisMonth float64
 	if createdAt.Before(monthStart) {
 		effectiveStart = monthStart
+		// Accumulated stop hours from previous months don't apply to this month
+		stopHoursThisMonth = 0
+	} else {
+		stopHoursThisMonth = accumulatedStopHours
 	}
 
 	// Running hours so far within the current month
-	running := RunningHours(effectiveStart, now, accumulatedStopHours, stoppedAt)
+	running := RunningHours(effectiveStart, now, stopHoursThisMonth, stoppedAt)
 
 	var projectedEC2Hours float64
 	if stoppedAt != nil {
@@ -90,13 +97,15 @@ func Projected(instanceType string, ebsGB int, createdAt, now time.Time, accumul
 	}
 
 	ec2 := hourly * projectedEC2Hours
-	// EBS is charged for the full month regardless of instance state
+	// EBS and EIP are charged for the full month regardless of instance state
 	ebs := ebsPerGBMonth * float64(ebsGB) * (monthHours / avgHoursMonth)
+	eip := eipPerHour * monthHours
 
 	return CostBreakdown{
 		EC2:   ec2,
 		EBS:   ebs,
-		Total: ec2 + ebs,
+		EIP:   eip,
+		Total: ec2 + ebs + eip,
 	}, nil
 }
 

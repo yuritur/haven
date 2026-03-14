@@ -18,38 +18,45 @@ func TestCalculate(t *testing.T) {
 		instanceType string
 		ebsGB        int
 		runningHours float64
+		totalHours   float64
 		wantEC2      float64
 		wantEBS      float64
+		wantEIP      float64
 		wantErr      bool
 	}{
 		{
-			name:         "t3.large 24 hours",
+			name:         "t3.large 24 hours running",
 			instanceType: "t3.large",
 			ebsGB:        30,
 			runningHours: 24,
+			totalHours:   24,
 			wantEC2:      0.0832 * 24,
 			wantEBS:      0.08 * 30 * (24.0 / 730.0),
+			wantEIP:      0.005 * 24,
 		},
 		{
-			name:         "g5.xlarge 48 hours",
+			name:         "g5.xlarge 48 hours with 12 hours stopped",
 			instanceType: "g5.xlarge",
 			ebsGB:        100,
-			runningHours: 48,
-			wantEC2:      1.006 * 48,
+			runningHours: 36,
+			totalHours:   48,
+			wantEC2:      1.006 * 36,
 			wantEBS:      0.08 * 100 * (48.0 / 730.0),
+			wantEIP:      0.005 * 48,
 		},
 		{
 			name:         "unknown instance type",
 			instanceType: "m5.xlarge",
 			ebsGB:        30,
 			runningHours: 24,
+			totalHours:   24,
 			wantErr:      true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Calculate(tt.instanceType, tt.ebsGB, tt.runningHours)
+			got, err := Calculate(tt.instanceType, tt.ebsGB, tt.runningHours, tt.totalHours)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -65,11 +72,12 @@ func TestCalculate(t *testing.T) {
 			if !approxEqual(got.EBS, tt.wantEBS, 0.001) {
 				t.Errorf("EBS = %f, want %f", got.EBS, tt.wantEBS)
 			}
-			if !approxEqual(got.Total, tt.wantEC2+tt.wantEBS, 0.001) {
-				t.Errorf("Total = %f, want %f", got.Total, tt.wantEC2+tt.wantEBS)
+			if !approxEqual(got.EIP, tt.wantEIP, 0.001) {
+				t.Errorf("EIP = %f, want %f", got.EIP, tt.wantEIP)
 			}
-			if got.EIP != 0 {
-				t.Errorf("EIP = %f, want 0", got.EIP)
+			wantTotal := tt.wantEC2 + tt.wantEBS + tt.wantEIP
+			if !approxEqual(got.Total, wantTotal, 0.001) {
+				t.Errorf("Total = %f, want %f", got.Total, wantTotal)
 			}
 			wantUptime := time.Duration(tt.runningHours * float64(time.Hour))
 			if got.Uptime != wantUptime {
@@ -216,8 +224,8 @@ func TestProjected(t *testing.T) {
 			if !tt.checkEBS(got.EBS) {
 				t.Errorf("EBS = %f, check failed", got.EBS)
 			}
-			if !approxEqual(got.Total, got.EC2+got.EBS, 0.001) {
-				t.Errorf("Total = %f, want EC2+EBS = %f", got.Total, got.EC2+got.EBS)
+			if !approxEqual(got.Total, got.EC2+got.EBS+got.EIP, 0.001) {
+				t.Errorf("Total = %f, want EC2+EBS+EIP = %f", got.Total, got.EC2+got.EBS+got.EIP)
 			}
 		})
 	}

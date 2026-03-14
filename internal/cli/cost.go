@@ -50,7 +50,8 @@ func runCost(ctx context.Context, prov provider.Provider, store provider.StateSt
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "Cost for %s (%s on %s)\n", d.ID, d.Model, d.InstanceType)
 
-	breakdown, calcErr := pricing.Calculate(d.InstanceType, ebsGB, runningHours)
+	totalHours := now.Sub(d.CreatedAt).Hours()
+	breakdown, calcErr := pricing.Calculate(d.InstanceType, ebsGB, runningHours, totalHours)
 	if calcErr != nil {
 		fmt.Fprintf(&buf, "Uptime: %s\n\n", pricing.FormatDuration(time.Duration(runningHours*float64(time.Hour))))
 		fmt.Fprintf(&buf, "Warning: %v\n", calcErr)

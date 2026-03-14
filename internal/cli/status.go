@@ -54,7 +54,8 @@ func runStatus(ctx context.Context, store provider.StateStore) error {
 			ebsGB = mc.EBSVolumeGB
 		}
 		runHours := pricing.RunningHours(d.CreatedAt, now, d.AccumulatedStopHours, d.StoppedAt)
-		if cb, err := pricing.Calculate(d.InstanceType, ebsGB, runHours); err == nil {
+		totalHours := now.Sub(d.CreatedAt).Hours()
+		if cb, err := pricing.Calculate(d.InstanceType, ebsGB, runHours, totalHours); err == nil {
 			costStr = pricing.FormatUSD(cb.Total)
 		}
 
