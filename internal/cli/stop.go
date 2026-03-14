@@ -15,7 +15,12 @@ func newStopCmd(providerName *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop <deployment-id>",
 		Short: "Stop a running deployment",
-		Args:  cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("deployment ID is required\n\nUsage: haven stop <deployment-id>")
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 			if err != nil {

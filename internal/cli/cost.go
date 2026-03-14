@@ -19,7 +19,12 @@ func newCostCmd(providerName *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cost <deployment-id>",
 		Short: "Show estimated cost for a deployment",
-		Args:  cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("deployment ID is required\n\nUsage: haven cost <deployment-id>")
+			}
+			return cobra.ExactArgs(1)(cmd, args)
+		},
 	}
 	cmd.Flags().BoolVar(&projected, "projected", false, "Show projected cost to end of month")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {

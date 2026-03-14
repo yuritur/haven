@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -64,6 +65,9 @@ func Execute() {
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "\033[31merror: %v\033[0m\n", err)
+		if strings.Contains(err.Error(), "deployment ID is required") {
+			fmt.Fprintf(os.Stderr, "\n  Run: \033[33mhaven status\033[0m to list deployments\n")
+		}
 		os.Exit(1)
 	}
 }
