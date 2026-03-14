@@ -98,3 +98,7 @@ func (p *AWSProvider) Start(ctx context.Context, instanceID string) error {
 	})
 	return err
 }
+
+func (p *AWSProvider) AWSConfig() awssdk.Config {
+	return p.cfg
+}

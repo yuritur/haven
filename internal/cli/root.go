@@ -47,6 +47,7 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newChatCmd(&providerName))
 	root.AddCommand(newStopCmd(&providerName))
 	root.AddCommand(newStartCmd(&providerName))
+	root.AddCommand(newCostCmd(&providerName))
 
 	return root
 }
