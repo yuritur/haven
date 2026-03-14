@@ -57,34 +57,36 @@ func runCost(ctx context.Context, prov provider.Provider, id string, projected b
 	now := time.Now()
 	runningHours := pricing.RunningHours(d.CreatedAt, now, d.AccumulatedStopHours, d.StoppedAt)
 
+	y := func(s string) string { return "\033[33m" + s + "\033[0m" }
+
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "Cost for %s (%s on %s)\n", d.ID, d.Model, d.InstanceType)
+	fmt.Fprintf(&buf, "Cost for %s (%s on %s)\n", y(d.ID), y(d.Model), y(d.InstanceType))
 
 	totalHours := now.Sub(d.CreatedAt).Hours()
 	breakdown, calcErr := pricing.Calculate(d.InstanceType, ebsGB, runningHours, totalHours)
 	if calcErr != nil {
-		fmt.Fprintf(&buf, "Uptime: %s\n\n", pricing.FormatDuration(time.Duration(runningHours*float64(time.Hour))))
+		fmt.Fprintf(&buf, "Uptime: %s\n\n", y(pricing.FormatDuration(time.Duration(runningHours*float64(time.Hour)))))
 		fmt.Fprintf(&buf, "Warning: %v\n", calcErr)
 	} else {
-		fmt.Fprintf(&buf, "Uptime: %s\n", pricing.FormatDuration(breakdown.Uptime))
+		fmt.Fprintf(&buf, "Uptime: %s\n", y(pricing.FormatDuration(breakdown.Uptime)))
 		fmt.Fprintf(&buf, "\nEstimated (us-east-1 rates):\n")
-		fmt.Fprintf(&buf, "  EC2 compute    %s\n", pricing.FormatUSD(breakdown.EC2))
-		fmt.Fprintf(&buf, "  EBS storage    %s\n", pricing.FormatUSD(breakdown.EBS))
-		fmt.Fprintf(&buf, "  EIP            %s\n", pricing.FormatUSD(breakdown.EIP))
-		fmt.Fprintf(&buf, "  %s\n", "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500")
-		fmt.Fprintf(&buf, "  Total          %s\n", pricing.FormatUSD(breakdown.Total))
+		fmt.Fprintf(&buf, "  EC2 compute    %s\n", y(pricing.FormatUSD(breakdown.EC2)))
+		fmt.Fprintf(&buf, "  EBS storage    %s\n", y(pricing.FormatUSD(breakdown.EBS)))
+		fmt.Fprintf(&buf, "  EIP            %s\n", y(pricing.FormatUSD(breakdown.EIP)))
+		fmt.Fprintf(&buf, "  %s\n", y("\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"))
+		fmt.Fprintf(&buf, "  Total          %s\n", y(pricing.FormatUSD(breakdown.Total)))
 	}
 
 	if cf, ok := prov.(provider.CostFetcher); ok {
 		if actual, err := cf.FetchActualCost(ctx, d.InstanceID, d.CreatedAt, now); err == nil && actual != nil {
 			fmt.Fprintf(&buf, "\nAlready counted (AWS billing, ~24h delay):\n")
-			fmt.Fprintf(&buf, "  Total          %s\n", pricing.FormatUSD(actual.Total))
+			fmt.Fprintf(&buf, "  Total          %s\n", y(pricing.FormatUSD(actual.Total)))
 		}
 	}
 
 	if projected && calcErr == nil {
 		if proj, err := pricing.Projected(d.InstanceType, ebsGB, d.CreatedAt, now, d.AccumulatedStopHours, d.StoppedAt); err == nil {
-			fmt.Fprintf(&buf, "\nProjected to end of month:  %s\n", pricing.FormatUSD(proj.Total))
+			fmt.Fprintf(&buf, "\nProjected to end of month:  %s\n", y(pricing.FormatUSD(proj.Total)))
 		}
 	}
 
