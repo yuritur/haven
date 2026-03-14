@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/havenapp/haven/internal/models"
+	"github.com/havenapp/haven/internal/pricing"
 	"github.com/havenapp/haven/internal/provider"
 )
 
@@ -36,10 +39,26 @@ func runStatus(ctx context.Context, store provider.StateStore) error {
 		return nil
 	}
 
-	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %s\033[0m\n", "ID", "CLOUD", "MODEL", "INSTANCE", "ENDPOINT")
-	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %s\033[0m\n", "--------------------", "------", "--------------", "------------", "--------")
+	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %-9s  %-10s  %s\033[0m\n", "ID", "CLOUD", "MODEL", "INSTANCE", "STATE", "EST.COST", "ENDPOINT")
+	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %-9s  %-10s  %s\033[0m\n", "--------------------", "------", "--------------", "------------", "---------", "----------", "--------")
+	now := time.Now()
 	for _, d := range deployments {
-		fmt.Printf("%-20s  %-6s  %-14s  %-12s  %s\n", d.ID, d.Provider, d.Model, d.InstanceType, d.Endpoint)
+		state := "running"
+		if d.StoppedAt != nil {
+			state = "stopped"
+		}
+
+		costStr := "N/A"
+		ebsGB := 30
+		if mc, err := models.Lookup(d.Model); err == nil {
+			ebsGB = mc.EBSVolumeGB
+		}
+		runHours := pricing.RunningHours(d.CreatedAt, now, d.AccumulatedStopHours, d.StoppedAt)
+		if cb, err := pricing.Calculate(d.InstanceType, ebsGB, runHours); err == nil {
+			costStr = pricing.FormatUSD(cb.Total)
+		}
+
+		fmt.Printf("%-20s  %-6s  %-14s  %-12s  %-9s  %-10s  %s\n", d.ID, d.Provider, d.Model, d.InstanceType, state, costStr, d.Endpoint)
 	}
 	return nil
 }
