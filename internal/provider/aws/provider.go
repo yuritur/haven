@@ -5,6 +5,7 @@ import (
 	"io"
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/provider/aws/cfn"
@@ -80,4 +81,20 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 
 func (p *AWSProvider) Destroy(ctx context.Context, providerRef string) error {
 	return cfn.Destroy(ctx, p.cfg, providerRef, p.out)
+}
+
+func (p *AWSProvider) Stop(ctx context.Context, instanceID string) error {
+	client := ec2.NewFromConfig(p.cfg)
+	_, err := client.StopInstances(ctx, &ec2.StopInstancesInput{
+		InstanceIds: []string{instanceID},
+	})
+	return err
+}
+
+func (p *AWSProvider) Start(ctx context.Context, instanceID string) error {
+	client := ec2.NewFromConfig(p.cfg)
+	_, err := client.StartInstances(ctx, &ec2.StartInstancesInput{
+		InstanceIds: []string{instanceID},
+	})
+	return err
 }

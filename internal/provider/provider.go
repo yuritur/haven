@@ -58,14 +58,18 @@ type Deployment struct {
 	Endpoint     string    `json:"endpoint"`
 	APIKey       string    `json:"api_key"`
 	// TLSKey is intentionally absent — private key is never persisted to state.
-	TLSCert        string `json:"tls_cert"`
-	TLSFingerprint string `json:"tls_fingerprint"`
+	TLSCert              string     `json:"tls_cert"`
+	TLSFingerprint       string     `json:"tls_fingerprint"`
+	StoppedAt            *time.Time `json:"stopped_at,omitempty"`
+	AccumulatedStopHours float64    `json:"accumulated_stop_hours,omitempty"`
 }
 
 type Provider interface {
 	Identity(ctx context.Context) (Identity, error)
 	Deploy(ctx context.Context, input DeployInput) (DeployResult, error)
 	Destroy(ctx context.Context, providerRef string) error
+	Stop(ctx context.Context, instanceID string) error
+	Start(ctx context.Context, instanceID string) error
 }
 
 type StateStore interface {

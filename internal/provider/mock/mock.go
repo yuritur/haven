@@ -15,6 +15,8 @@ type Provider struct {
 	IdentityFn func(ctx context.Context) (provider.Identity, error)
 	DeployFn   func(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error)
 	DestroyFn  func(ctx context.Context, providerRef string) error
+	StopFn     func(ctx context.Context, instanceID string) error
+	StartFn    func(ctx context.Context, instanceID string) error
 }
 
 func (m *Provider) Identity(ctx context.Context) (provider.Identity, error) {
@@ -36,6 +38,20 @@ func (m *Provider) Destroy(ctx context.Context, providerRef string) error {
 		return errors.New("mock: DestroyFn not configured")
 	}
 	return m.DestroyFn(ctx, providerRef)
+}
+
+func (m *Provider) Stop(ctx context.Context, instanceID string) error {
+	if m.StopFn == nil {
+		return errors.New("mock: StopFn not configured")
+	}
+	return m.StopFn(ctx, instanceID)
+}
+
+func (m *Provider) Start(ctx context.Context, instanceID string) error {
+	if m.StartFn == nil {
+		return errors.New("mock: StartFn not configured")
+	}
+	return m.StartFn(ctx, instanceID)
 }
 
 type StateStore struct {
