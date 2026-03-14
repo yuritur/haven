@@ -45,6 +45,8 @@ func NewRootCmd() *cobra.Command {
 	root.AddCommand(newStatusCmd(&providerName))
 	root.AddCommand(newCertCmd(&providerName))
 	root.AddCommand(newChatCmd(&providerName))
+	root.AddCommand(newStopCmd(&providerName))
+	root.AddCommand(newStartCmd(&providerName))
 
 	return root
 }
