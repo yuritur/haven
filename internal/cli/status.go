@@ -19,17 +19,17 @@ func newStatusCmd(providerName *string) *cobra.Command {
 		Short: "List active deployments",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, store, err := buildProvider(cmd.Context(), *providerName, io.Discard)
+			prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 			if err != nil {
 				return err
 			}
-			return runStatus(cmd.Context(), store)
+			return runStatus(cmd.Context(), prov)
 		},
 	}
 }
 
-func runStatus(ctx context.Context, store provider.StateStore) error {
-	deployments, err := store.List(ctx)
+func runStatus(ctx context.Context, prov provider.Provider) error {
+	deployments, err := prov.List(ctx)
 	if err != nil {
 		return fmt.Errorf("list deployments: %w", err)
 	}

@@ -8,15 +8,18 @@ import (
 )
 
 var _ provider.Provider = (*Provider)(nil)
-var _ provider.StateStore = (*StateStore)(nil)
 var _ provider.Prompter = (*Prompter)(nil)
 
 type Provider struct {
-	IdentityFn func(ctx context.Context) (provider.Identity, error)
-	DeployFn   func(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error)
-	DestroyFn  func(ctx context.Context, providerRef string) error
-	StopFn     func(ctx context.Context, instanceID string) error
-	StartFn    func(ctx context.Context, instanceID string) error
+	IdentityFn         func(ctx context.Context) (provider.Identity, error)
+	ListFn             func(ctx context.Context) ([]provider.Deployment, error)
+	LoadDeploymentFn   func(ctx context.Context, id string) (*provider.Deployment, error)
+	SaveDeploymentFn   func(ctx context.Context, d provider.Deployment) error
+	DeleteDeploymentFn func(ctx context.Context, id string) error
+	DeployFn           func(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error)
+	DestroyFn          func(ctx context.Context, providerRef string) error
+	StopFn             func(ctx context.Context, instanceID string) error
+	StartFn            func(ctx context.Context, instanceID string) error
 }
 
 func (m *Provider) Identity(ctx context.Context) (provider.Identity, error) {
@@ -54,39 +57,32 @@ func (m *Provider) Start(ctx context.Context, instanceID string) error {
 	return m.StartFn(ctx, instanceID)
 }
 
-type StateStore struct {
-	SaveFn   func(ctx context.Context, d provider.Deployment) error
-	LoadFn   func(ctx context.Context, id string) (*provider.Deployment, error)
-	ListFn   func(ctx context.Context) ([]provider.Deployment, error)
-	DeleteFn func(ctx context.Context, id string) error
-}
-
-func (m *StateStore) Save(ctx context.Context, d provider.Deployment) error {
-	if m.SaveFn == nil {
-		return errors.New("mock: SaveFn not configured")
-	}
-	return m.SaveFn(ctx, d)
-}
-
-func (m *StateStore) Load(ctx context.Context, id string) (*provider.Deployment, error) {
-	if m.LoadFn == nil {
-		return nil, errors.New("mock: LoadFn not configured")
-	}
-	return m.LoadFn(ctx, id)
-}
-
-func (m *StateStore) List(ctx context.Context) ([]provider.Deployment, error) {
+func (m *Provider) List(ctx context.Context) ([]provider.Deployment, error) {
 	if m.ListFn == nil {
 		return nil, errors.New("mock: ListFn not configured")
 	}
 	return m.ListFn(ctx)
 }
 
-func (m *StateStore) Delete(ctx context.Context, id string) error {
-	if m.DeleteFn == nil {
-		return errors.New("mock: DeleteFn not configured")
+func (m *Provider) LoadDeployment(ctx context.Context, id string) (*provider.Deployment, error) {
+	if m.LoadDeploymentFn == nil {
+		return nil, errors.New("mock: LoadDeploymentFn not configured")
 	}
-	return m.DeleteFn(ctx, id)
+	return m.LoadDeploymentFn(ctx, id)
+}
+
+func (m *Provider) SaveDeployment(ctx context.Context, d provider.Deployment) error {
+	if m.SaveDeploymentFn == nil {
+		return errors.New("mock: SaveDeploymentFn not configured")
+	}
+	return m.SaveDeploymentFn(ctx, d)
+}
+
+func (m *Provider) DeleteDeployment(ctx context.Context, id string) error {
+	if m.DeleteDeploymentFn == nil {
+		return errors.New("mock: DeleteDeploymentFn not configured")
+	}
+	return m.DeleteDeploymentFn(ctx, id)
 }
 
 type QuotaEnsurer struct {

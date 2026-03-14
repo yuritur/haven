@@ -19,8 +19,6 @@ type S3StateStore struct {
 	bucketName string
 }
 
-var _ provider.StateStore = (*S3StateStore)(nil)
-
 func newS3StateStore(ctx context.Context, cfg awssdk.Config, accountID string) (*S3StateStore, error) {
 	bucketName, err := ensureStateBucket(ctx, cfg, accountID)
 	if err != nil {

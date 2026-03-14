@@ -13,9 +13,8 @@ import (
 )
 
 func TestRunCost_Basic(t *testing.T) {
-	prov := &mock.Provider{}
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	prov := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:           "haven-a1b2c3d4",
 				Model:        "llama3.2:1b",
@@ -27,7 +26,7 @@ func TestRunCost_Basic(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, store, "haven-a1b2c3d4", false, &buf)
+	err := runCost(context.Background(), prov, "haven-a1b2c3d4", false, &buf)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -41,9 +40,8 @@ func TestRunCost_Basic(t *testing.T) {
 }
 
 func TestRunCost_Projected(t *testing.T) {
-	prov := &mock.Provider{}
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	prov := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:           "haven-a1b2c3d4",
 				Model:        "llama3.2:1b",
@@ -55,7 +53,7 @@ func TestRunCost_Projected(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, store, "haven-a1b2c3d4", true, &buf)
+	err := runCost(context.Background(), prov, "haven-a1b2c3d4", true, &buf)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -66,24 +64,22 @@ func TestRunCost_Projected(t *testing.T) {
 }
 
 func TestRunCost_NotFound(t *testing.T) {
-	prov := &mock.Provider{}
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	prov := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return nil, fmt.Errorf("deployment not found")
 		},
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, store, "nonexistent", false, &buf)
+	err := runCost(context.Background(), prov, "nonexistent", false, &buf)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
 }
 
 func TestRunCost_UnknownInstanceType(t *testing.T) {
-	prov := &mock.Provider{}
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	prov := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:           "haven-a1b2c3d4",
 				Model:        "llama3.2:1b",
@@ -95,7 +91,7 @@ func TestRunCost_UnknownInstanceType(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runCost(context.Background(), prov, store, "haven-a1b2c3d4", false, &buf)
+	err := runCost(context.Background(), prov, "haven-a1b2c3d4", false, &buf)
 	if err != nil {
 		t.Fatalf("expected no error (warning only), got: %v", err)
 	}

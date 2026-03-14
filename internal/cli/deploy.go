@@ -40,7 +40,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 				out = os.Stdout
 			}
 			prompter := newTerminalPrompter()
-			prov, store, err := buildProvider(cmd.Context(), *providerName, out)
+			prov, err := buildProvider(cmd.Context(), *providerName, out)
 			if err != nil {
 				return err
 			}
@@ -48,12 +48,12 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 				fmt.Print(msg)
 				return prompter.Input("")
 			}
-			return runDeploy(cmd.Context(), prov, store, *providerName, args[0], *verbose, out, promptFn)
+			return runDeploy(cmd.Context(), prov, *providerName, args[0], *verbose, out, promptFn)
 		},
 	}
 }
 
-func runDeploy(ctx context.Context, prov provider.Provider, store provider.StateStore, providerName string, modelName string, verbose bool, out io.Writer, promptFn func(string) string) error {
+func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, verbose bool, out io.Writer, promptFn func(string) string) error {
 	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 	}
 	fmt.Printf("\033[33mRestricting port 11434 to:\033[0m %s\n\n", userIP)
 
-	existing, err := store.List(ctx)
+	existing, err := prov.List(ctx)
 	if err != nil {
 		return fmt.Errorf("check existing deployments: %w", err)
 	}
@@ -164,7 +164,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		TLSFingerprint: tlsFingerprint,
 	}
 
-	if err := store.Save(ctx, deployment); err != nil {
+	if err := prov.SaveDeployment(ctx, deployment); err != nil {
 		return fmt.Errorf("save state: %w", err)
 	}
 
@@ -185,7 +185,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, store provider.State
 		}
 		if sigCtx.Err() != nil {
 			cleanup(result.ProviderRef)
-			_ = store.Delete(context.Background(), deploymentID)
+			_ = prov.DeleteDeployment(context.Background(), deploymentID)
 			return nil
 		}
 		return fmt.Errorf("waiting for Ollama: %w\nDeployment %s is saved — run `haven destroy %s` to clean up", err, deploymentID, deploymentID)

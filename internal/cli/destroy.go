@@ -28,17 +28,17 @@ func newDestroyCmd(providerName *string, verbose *bool) *cobra.Command {
 			if *verbose {
 				out = os.Stdout
 			}
-			prov, store, err := buildProvider(cmd.Context(), *providerName, out)
+			prov, err := buildProvider(cmd.Context(), *providerName, out)
 			if err != nil {
 				return err
 			}
-			return runDestroy(cmd.Context(), prov, store, args[0], *verbose)
+			return runDestroy(cmd.Context(), prov, args[0], *verbose)
 		},
 	}
 }
 
-func runDestroy(ctx context.Context, prov provider.Provider, store provider.StateStore, deploymentID string, verbose bool) error {
-	deployment, err := store.Load(ctx, deploymentID)
+func runDestroy(ctx context.Context, prov provider.Provider, deploymentID string, verbose bool) error {
+	deployment, err := prov.LoadDeployment(ctx, deploymentID)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func runDestroy(ctx context.Context, prov provider.Provider, store provider.Stat
 		return fmt.Errorf("destroy: %w", err)
 	}
 
-	if err := store.Delete(ctx, deploymentID); err != nil {
+	if err := prov.DeleteDeployment(ctx, deploymentID); err != nil {
 		fmt.Printf("Warning: failed to delete state for %s: %v\n", deploymentID, err)
 	}
 

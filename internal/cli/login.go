@@ -18,8 +18,7 @@ func newLoginCmd(providerName *string) *cobra.Command {
 			prompter := newTerminalPrompter()
 			switch *providerName {
 			case "aws":
-				_, _, err := awsprovider.Login(cmd.Context(), prompter, os.Stdout)
-				if err != nil {
+				if err := awsprovider.Login(cmd.Context(), prompter, os.Stdout); err != nil {
 					return err
 				}
 				fmt.Println("\n\033[33mLogged in successfully.\033[0m")

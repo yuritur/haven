@@ -22,7 +22,7 @@ type Prompter interface {
 
 type Identity struct {
 	AccountID string
-	ARN       string
+	ARN       string // TODO AWS specific should be moved to the aws provider
 	Region    string
 }
 
@@ -66,15 +66,21 @@ type Deployment struct {
 
 type Provider interface {
 	Identity(ctx context.Context) (Identity, error)
+	List(ctx context.Context) ([]Deployment, error)
+	LoadDeployment(ctx context.Context, id string) (*Deployment, error)
+	SaveDeployment(ctx context.Context, d Deployment) error
+	DeleteDeployment(ctx context.Context, id string) error
 	Deploy(ctx context.Context, input DeployInput) (DeployResult, error)
 	Destroy(ctx context.Context, providerRef string) error
 	Stop(ctx context.Context, instanceID string) error
 	Start(ctx context.Context, instanceID string) error
 }
 
-type StateStore interface {
-	Save(ctx context.Context, d Deployment) error
-	Load(ctx context.Context, id string) (*Deployment, error)
-	List(ctx context.Context) ([]Deployment, error)
-	Delete(ctx context.Context, id string) error
+type ActualCost struct {
+	Total    float64
+	Currency string
+}
+
+type CostFetcher interface {
+	FetchActualCost(ctx context.Context, instanceID string, from, to time.Time) (*ActualCost, error)
 }

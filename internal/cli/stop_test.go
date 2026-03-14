@@ -23,23 +23,20 @@ func TestRunStop_Success(t *testing.T) {
 			}
 			return nil
 		},
-	}
-
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:         "haven-test1234",
 				InstanceID: "i-abc123",
 			}, nil
 		},
-		SaveFn: func(ctx context.Context, d provider.Deployment) error {
+		SaveDeploymentFn: func(ctx context.Context, d provider.Deployment) error {
 			saveCalled = true
 			saved = d
 			return nil
 		},
 	}
 
-	err := runStop(context.Background(), prov, store, "haven-test1234")
+	err := runStop(context.Background(), prov, "haven-test1234")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -55,11 +52,10 @@ func TestRunStop_Success(t *testing.T) {
 }
 
 func TestRunStop_AlreadyStopped(t *testing.T) {
-	prov := &mock.Provider{}
 	stopped := time.Now()
 
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	prov := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:        "haven-test1234",
 				StoppedAt: &stopped,
@@ -67,7 +63,7 @@ func TestRunStop_AlreadyStopped(t *testing.T) {
 		},
 	}
 
-	err := runStop(context.Background(), prov, store, "haven-test1234")
+	err := runStop(context.Background(), prov, "haven-test1234")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

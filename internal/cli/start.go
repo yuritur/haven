@@ -17,17 +17,17 @@ func newStartCmd(providerName *string) *cobra.Command {
 		Short: "Start a stopped deployment",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			prov, store, err := buildProvider(cmd.Context(), *providerName, io.Discard)
+			prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 			if err != nil {
 				return err
 			}
-			return runStart(cmd.Context(), prov, store, args[0])
+			return runStart(cmd.Context(), prov, args[0])
 		},
 	}
 }
 
-func runStart(ctx context.Context, prov provider.Provider, store provider.StateStore, id string) error {
-	d, err := store.Load(ctx, id)
+func runStart(ctx context.Context, prov provider.Provider, id string) error {
+	d, err := prov.LoadDeployment(ctx, id)
 	if err != nil {
 		return fmt.Errorf("load deployment: %w", err)
 	}
@@ -43,7 +43,7 @@ func runStart(ctx context.Context, prov provider.Provider, store provider.StateS
 	d.AccumulatedStopHours += time.Since(*d.StoppedAt).Hours()
 	d.StoppedAt = nil
 
-	if err := store.Save(ctx, *d); err != nil {
+	if err := prov.SaveDeployment(ctx, *d); err != nil {
 		return fmt.Errorf("save deployment: %w", err)
 	}
 

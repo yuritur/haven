@@ -11,8 +11,8 @@ import (
 )
 
 func TestRunCert_PEM(t *testing.T) {
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	store := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:      "haven-test1234",
 				TLSCert: "-----BEGIN CERTIFICATE-----\nMIIB...\n-----END CERTIFICATE-----\n",
@@ -27,8 +27,8 @@ func TestRunCert_PEM(t *testing.T) {
 }
 
 func TestRunCert_Fingerprint(t *testing.T) {
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	store := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:             "haven-test1234",
 				TLSFingerprint: "sha256:abcdef1234567890",
@@ -43,8 +43,8 @@ func TestRunCert_Fingerprint(t *testing.T) {
 }
 
 func TestRunCert_NoCert(t *testing.T) {
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	store := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:      "haven-test1234",
 				TLSCert: "",
@@ -62,8 +62,8 @@ func TestRunCert_NoCert(t *testing.T) {
 }
 
 func TestRunCert_NoFingerprint(t *testing.T) {
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	store := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:             "haven-test1234",
 				TLSFingerprint: "",
@@ -81,8 +81,8 @@ func TestRunCert_NoFingerprint(t *testing.T) {
 }
 
 func TestRunCert_NotFound(t *testing.T) {
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	store := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return nil, fmt.Errorf("deployment not found")
 		},
 	}

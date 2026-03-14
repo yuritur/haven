@@ -15,6 +15,7 @@ func TestRunStart_Success(t *testing.T) {
 	saveCalled := false
 	var saved provider.Deployment
 
+	stopped := time.Now().Add(-2 * time.Hour)
 	prov := &mock.Provider{
 		StartFn: func(ctx context.Context, instanceID string) error {
 			startCalled = true
@@ -23,25 +24,21 @@ func TestRunStart_Success(t *testing.T) {
 			}
 			return nil
 		},
-	}
-
-	stopped := time.Now().Add(-2 * time.Hour)
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID:         "haven-test1234",
 				InstanceID: "i-abc123",
 				StoppedAt:  &stopped,
 			}, nil
 		},
-		SaveFn: func(ctx context.Context, d provider.Deployment) error {
+		SaveDeploymentFn: func(ctx context.Context, d provider.Deployment) error {
 			saveCalled = true
 			saved = d
 			return nil
 		},
 	}
 
-	err := runStart(context.Background(), prov, store, "haven-test1234")
+	err := runStart(context.Background(), prov, "haven-test1234")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -60,17 +57,15 @@ func TestRunStart_Success(t *testing.T) {
 }
 
 func TestRunStart_NotStopped(t *testing.T) {
-	prov := &mock.Provider{}
-
-	store := &mock.StateStore{
-		LoadFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
+	prov := &mock.Provider{
+		LoadDeploymentFn: func(ctx context.Context, id string) (*provider.Deployment, error) {
 			return &provider.Deployment{
 				ID: "haven-test1234",
 			}, nil
 		},
 	}
 
-	err := runStart(context.Background(), prov, store, "haven-test1234")
+	err := runStart(context.Background(), prov, "haven-test1234")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

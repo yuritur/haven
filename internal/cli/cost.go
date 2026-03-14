@@ -7,7 +7,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/spf13/cobra"
 
 	"github.com/havenapp/haven/internal/models"
@@ -24,17 +23,17 @@ func newCostCmd(providerName *string) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&projected, "projected", false, "Show projected cost to end of month")
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		prov, store, err := buildProvider(cmd.Context(), *providerName, io.Discard)
+		prov, err := buildProvider(cmd.Context(), *providerName, io.Discard)
 		if err != nil {
 			return err
 		}
-		return runCost(cmd.Context(), prov, store, args[0], projected, cmd.OutOrStdout())
+		return runCost(cmd.Context(), prov, args[0], projected, cmd.OutOrStdout())
 	}
 	return cmd
 }
 
-func runCost(ctx context.Context, prov provider.Provider, store provider.StateStore, id string, projected bool, w io.Writer) error {
-	d, err := store.Load(ctx, id)
+func runCost(ctx context.Context, prov provider.Provider, id string, projected bool, w io.Writer) error {
+	d, err := prov.LoadDeployment(ctx, id)
 	if err != nil {
 		return fmt.Errorf("load deployment: %w", err)
 	}
@@ -65,10 +64,8 @@ func runCost(ctx context.Context, prov provider.Provider, store provider.StateSt
 		fmt.Fprintf(&buf, "  Total          %s\n", pricing.FormatUSD(breakdown.Total))
 	}
 
-	// Try Cost Explorer via type assertion
-	if ce, ok := prov.(interface{ AWSConfig() aws.Config }); ok {
-		client := pricing.NewCostExplorerClient(ce.AWSConfig())
-		if actual, err := pricing.FetchActualCost(ctx, client, d.InstanceID, d.CreatedAt, now); err == nil && actual != nil {
+	if cf, ok := prov.(provider.CostFetcher); ok {
+		if actual, err := cf.FetchActualCost(ctx, d.InstanceID, d.CreatedAt, now); err == nil && actual != nil {
 			fmt.Fprintf(&buf, "\nAlready counted (AWS billing, ~24h delay):\n")
 			fmt.Fprintf(&buf, "  Total          %s\n", pricing.FormatUSD(actual.Total))
 		}

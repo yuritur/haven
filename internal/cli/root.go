@@ -68,11 +68,11 @@ func Execute() {
 	}
 }
 
-func buildProvider(ctx context.Context, name string, out io.Writer) (provider.Provider, provider.StateStore, error) {
+func buildProvider(ctx context.Context, name string, out io.Writer) (provider.Provider, error) {
 	switch name {
 	case "aws":
-		return awsprovider.ResumeSession(ctx, out)
+		return awsprovider.Build(ctx, out)
 	default:
-		return nil, nil, fmt.Errorf("unknown provider %q - available: aws", name)
+		return nil, fmt.Errorf("unknown provider %q - available: aws", name)
 	}
 }

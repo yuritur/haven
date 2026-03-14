@@ -16,44 +16,54 @@ type AWSProvider struct {
 	cfg        awssdk.Config
 	identity   provider.Identity
 	bucketName string
+	stateStore *S3StateStore
 	quotaStore *quota.Store
 	out        io.Writer
 }
 
 var _ provider.Provider = (*AWSProvider)(nil)
 
-func New(ctx context.Context, out io.Writer) (provider.Provider, provider.StateStore, error) {
-	cfg, err := loadConfig(ctx)
+func Build(ctx context.Context, out io.Writer) (provider.Provider, error) {
+	ar, err := authenticate(ctx, out)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	id, err := getIdentity(ctx, cfg)
+	store, err := newS3StateStore(ctx, ar.cfg, ar.identity.AccountID)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	store, err := newS3StateStore(ctx, cfg, id.AccountID)
-	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	p := &AWSProvider{
-		cfg:        cfg,
+		cfg:        ar.cfg,
 		out:        out,
 		bucketName: store.bucketName,
-		quotaStore: quota.NewStore(cfg, store.bucketName),
-		identity: provider.Identity{
-			AccountID: id.AccountID,
-			ARN:       id.ARN,
-			Region:    id.Region,
-		},
+		stateStore: store,
+		quotaStore: quota.NewStore(ar.cfg, store.bucketName),
+		identity:   ar.identity,
 	}
-	return p, store, nil
+
+	return p, nil
 }
 
 func (p *AWSProvider) Identity(_ context.Context) (provider.Identity, error) {
 	return p.identity, nil
+}
+
+func (p *AWSProvider) List(ctx context.Context) ([]provider.Deployment, error) {
+	return p.stateStore.List(ctx)
+}
+
+func (p *AWSProvider) LoadDeployment(ctx context.Context, id string) (*provider.Deployment, error) {
+	return p.stateStore.Load(ctx, id)
+}
+
+func (p *AWSProvider) SaveDeployment(ctx context.Context, d provider.Deployment) error {
+	return p.stateStore.Save(ctx, d)
+}
+
+func (p *AWSProvider) DeleteDeployment(ctx context.Context, id string) error {
+	return p.stateStore.Delete(ctx, id)
 }
 
 func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error) {
@@ -97,8 +107,4 @@ func (p *AWSProvider) Start(ctx context.Context, instanceID string) error {
 		InstanceIds: []string{instanceID},
 	})
 	return err
-}
-
-func (p *AWSProvider) AWSConfig() awssdk.Config {
-	return p.cfg
 }
