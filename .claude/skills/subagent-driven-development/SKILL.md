@@ -48,7 +48,6 @@ digraph process {
     "Read plan, extract all tasks with full text, note context, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
-    "Create iteration file in docs/iterations/" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
@@ -67,7 +66,6 @@ digraph process {
     "Mark task complete in TodoWrite" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
-    "Dispatch final code reviewer subagent for entire implementation" -> "Create iteration file in docs/iterations/";
 }
 ```
 
@@ -150,7 +148,6 @@ Code reviewer: ✅ Approved
 [Dispatch final code-reviewer]
 Final reviewer: All requirements met, ready to merge
 
-[Create iteration file docs/iterations/004-2026-03-09-feature-name.md]
 Done!
 ```
 
@@ -216,60 +213,6 @@ Done!
 **If subagent fails task:**
 - Dispatch fix subagent with specific instructions
 - Don't try to fix manually (context pollution)
-
-## Finishing Up: Iteration File
-
-After all tasks are complete and the final code review passes, create an iteration log file.
-
-**File naming:** `docs/iterations/NNN-YYYY-MM-DD-feature-name.md`
-- NNN = next sequential number (check existing files in `docs/iterations/`)
-- YYYY-MM-DD = today's date
-- feature-name = short kebab-case description
-
-**Template:**
-
-```markdown
-# Iteration NNN — [Feature title]
-
-**Date:** YYYY-MM-DD
-**Branch:** `[branch-name]`
-
-## What was done
-
-### Problem being solved
-
-[1-2 sentences: what problem existed before this work]
-
-### Solution
-
-[Brief description of the approach taken]
-
-### Files created
-
-| File | Description |
-|---|---|
-| `path/to/file.go` | What it does |
-
-### Files modified
-
-| File | Change |
-|---|---|
-| `path/to/file.go` | What changed |
-
-## What works
-
-[Build status, test results, verification commands and their output]
-
-## What's not covered
-
-[Known gaps, things intentionally skipped]
-
-## What's left
-
-[Next steps, follow-up work]
-```
-
-Keep it factual and concise. The iteration file is a record of what was done, not a narrative. Include actual test counts, build commands, and concrete results.
 
 ## Integration
 
