@@ -4,8 +4,6 @@ import (
 	"math"
 	"testing"
 	"time"
-
-	"github.com/havenapp/haven/internal/models"
 )
 
 func approxEqual(a, b, epsilon float64) bool {
@@ -239,9 +237,12 @@ func TestCalcRunningHoursNegativeClamping(t *testing.T) {
 }
 
 func TestAllRegisteredInstanceTypesHavePrices(t *testing.T) {
-	for _, cfg := range models.List() {
-		if _, ok := ec2Prices[cfg.InstanceType]; !ok {
-			t.Errorf("model registry uses %q but pricing has no rate", cfg.InstanceType)
+	knownInstanceTypes := []string{
+		"t3.large", "t3.xlarge", "g5.xlarge", "g5.2xlarge",
+	}
+	for _, it := range knownInstanceTypes {
+		if _, ok := ec2Prices[it]; !ok {
+			t.Errorf("instance type %q used by models has no pricing rate", it)
 		}
 	}
 }

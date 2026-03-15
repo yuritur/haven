@@ -28,6 +28,7 @@ type DeployInput struct {
 	EBSVolumeGB  int
 	HFRepo       string
 	HFFile       string
+	GPU          bool
 	Out          io.Writer
 }
 
@@ -49,6 +50,7 @@ func Deploy(ctx context.Context, cfg aws.Config, input DeployInput) (DeployResul
 		EBSVolumeGB:  input.EBSVolumeGB,
 		HFRepo:       input.HFRepo,
 		HFFile:       input.HFFile,
+		GPU:          input.GPU,
 	})
 	if err != nil {
 		return DeployResult{}, fmt.Errorf("generate template: %w", err)

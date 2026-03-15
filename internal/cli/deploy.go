@@ -53,23 +53,44 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 }
 
 func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	var modelCfg models.Config
-	var err error
-	if runtimeFlag != "" {
-		switch models.Runtime(runtimeFlag) {
-		case models.RuntimeOllama, models.RuntimeLlamaCpp:
-		default:
-			return fmt.Errorf("invalid runtime %q — valid options: ollama, llamacpp", runtimeFlag)
-		}
-		modelCfg, err = models.LookupWithRuntime(modelName, models.Runtime(runtimeFlag))
-	} else {
-		modelCfg, err = models.Lookup(modelName)
-	}
+	modelCfg, err := models.Lookup(modelName)
 	if err != nil {
 		return err
 	}
 
-	rt, err := runtime.New(modelCfg.Runtime)
+	var effectiveRuntime models.Runtime
+	if runtimeFlag != "" {
+		rt := models.Runtime(runtimeFlag)
+		switch rt {
+		case models.RuntimeOllama, models.RuntimeLlamaCpp:
+		default:
+			return fmt.Errorf("invalid runtime %q — valid options: ollama, llamacpp", runtimeFlag)
+		}
+		if !modelCfg.SupportsRuntime(rt) {
+			return fmt.Errorf("model %q does not support runtime %q", modelName, runtimeFlag)
+		}
+		effectiveRuntime = rt
+	} else {
+		if modelCfg.Ollama != nil {
+			effectiveRuntime = models.RuntimeOllama
+		} else if modelCfg.LlamaCpp != nil {
+			effectiveRuntime = models.RuntimeLlamaCpp
+		} else {
+			return fmt.Errorf("model %q has no supported runtime", modelName)
+		}
+	}
+
+	var modelTag string
+	var hfRepo, hfFile string
+	switch effectiveRuntime {
+	case models.RuntimeOllama:
+		modelTag = modelCfg.Ollama.Tag
+	case models.RuntimeLlamaCpp:
+		hfRepo = modelCfg.LlamaCpp.HFRepo
+		hfFile = modelCfg.LlamaCpp.HFFile
+	}
+
+	rt, err := runtime.New(effectiveRuntime)
 	if err != nil {
 		return err
 	}
@@ -103,7 +124,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("generate deployment ID: %w", err)
 	}
 
-	err = prov.EnsureQuota(ctx, modelCfg.InstanceType, prompter)
+	err = prov.EnsureQuota(ctx, modelName, effectiveRuntime, prompter)
 	switch {
 	case errors.Is(err, provider.ErrQuotaUserExit):
 		return nil
@@ -111,7 +132,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return err
 	}
 
-	fmt.Printf("\033[33mDeploying\033[0m %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
+	fmt.Printf("\033[33mDeploying\033[0m %s (id: %s)...\n\n", modelName, deploymentID)
 
 	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -136,17 +157,16 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 
 	result, err := prov.Deploy(sigCtx, provider.DeployInput{
 		DeploymentID:   deploymentID,
-		Runtime:        modelCfg.Runtime,
-		ModelTag:       modelCfg.Tag,
-		InstanceType:   modelCfg.InstanceType,
+		Runtime:        effectiveRuntime,
+		Model:          modelName,
+		ModelTag:       modelTag,
 		UserIP:         userIP + "/32",
 		APIKey:         apiKey,
 		TLSCert:        tlsCert,
 		TLSKey:         tlsKey,
 		TLSFingerprint: tlsFingerprint,
-		EBSVolumeGB:    modelCfg.EBSVolumeGB,
-		HFRepo:         modelCfg.HFRepo,
-		HFFile:         modelCfg.HFFile,
+		HFRepo:         hfRepo,
+		HFFile:         hfFile,
 	})
 
 	if spin != nil {
@@ -160,17 +180,19 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("deploy: %w", err)
 	}
 
+	fmt.Printf("\033[33mUsing instance:\033[0m %s\n", result.InstanceType)
+
 	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, rt.Port())
 
 	deployment := provider.Deployment{
 		ID:             deploymentID,
 		Provider:       providerName,
-		Runtime:        string(modelCfg.Runtime),
+		Runtime:        string(effectiveRuntime),
 		ProviderRef:    result.ProviderRef,
 		CreatedAt:      time.Now().UTC(),
 		Region:         identity.Region,
 		Model:          modelName,
-		InstanceType:   modelCfg.InstanceType,
+		InstanceType:   result.InstanceType,
 		InstanceID:     result.InstanceID,
 		PublicIP:       result.PublicIP,
 		Endpoint:       endpoint + "/v1",
@@ -183,7 +205,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("save state: %w", err)
 	}
 
-	if modelCfg.Runtime == models.RuntimeLlamaCpp {
+	if effectiveRuntime == models.RuntimeLlamaCpp {
 		fmt.Printf("Instance up at %s. Waiting for model...\n", result.PublicIP)
 	} else {
 		fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)
@@ -194,7 +216,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 	}
 
 	pollTimeout := 15 * time.Minute
-	if models.IsGPUInstance(modelCfg.InstanceType) {
+	if result.GPU {
 		pollTimeout = 30 * time.Minute
 	}
 

@@ -13,12 +13,17 @@ import (
 	"github.com/havenapp/haven/internal/tui"
 )
 
-func (p *AWSProvider) EnsureQuota(ctx context.Context, instanceType string, prompter provider.Prompter) error {
-	if !models.IsGPUInstance(instanceType) {
+func (p *AWSProvider) EnsureQuota(ctx context.Context, model string, runtime models.Runtime, prompter provider.Prompter) error {
+	spec, err := ResolveInstance(model, runtime)
+	if err != nil {
+		return err
+	}
+
+	if !spec.GPU {
 		return nil
 	}
 
-	quotaCode, err := quota.QuotaCodeForInstance(instanceType)
+	quotaCode, err := quota.QuotaCodeForInstance(spec.InstanceType)
 	if err != nil {
 		return err
 	}
@@ -31,7 +36,7 @@ func (p *AWSProvider) EnsureQuota(ctx context.Context, instanceType string, prom
 		return p.handleExistingQuotaRequest(ctx, existing, prompter)
 	}
 
-	status, err := quota.CheckQuota(ctx, p.cfg, instanceType)
+	status, err := quota.CheckQuota(ctx, p.cfg, spec.InstanceType)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not check GPU quota: %v\n", err)
 		return nil
@@ -41,7 +46,7 @@ func (p *AWSProvider) EnsureQuota(ctx context.Context, instanceType string, prom
 		return nil
 	}
 
-	return p.handleInsufficientQuota(ctx, status, instanceType, prompter)
+	return p.handleInsufficientQuota(ctx, status, spec.InstanceType, prompter)
 }
 
 func (p *AWSProvider) resolveTerminalStatus(ctx context.Context, status string, quotaCode string) (proceed bool, terminal bool) {

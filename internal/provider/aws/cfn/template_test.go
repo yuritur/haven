@@ -18,6 +18,7 @@ func testInput() TemplateInput {
 		TLSCert:      "FAKE_CERT_PEM",
 		TLSKey:       "FAKE_KEY_PEM",
 		EBSVolumeGB:  30,
+		GPU:          false,
 	}
 }
 
@@ -147,6 +148,7 @@ func TestGenerateTemplate_GPUAmi(t *testing.T) {
 	input := testInput()
 	input.InstanceType = "g5.xlarge"
 	input.EBSVolumeGB = 80
+	input.GPU = true
 	parsed := parseTemplate(t, input)
 
 	params := parsed["Parameters"].(map[string]interface{})

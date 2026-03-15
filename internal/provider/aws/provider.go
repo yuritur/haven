@@ -67,27 +67,35 @@ func (p *AWSProvider) DeleteDeployment(ctx context.Context, id string) error {
 }
 
 func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error) {
+	spec, err := ResolveInstance(input.Model, input.Runtime)
+	if err != nil {
+		return provider.DeployResult{}, err
+	}
+
 	result, err := cfn.Deploy(ctx, p.cfg, cfn.DeployInput{
 		StackName:    input.DeploymentID,
 		Runtime:      input.Runtime,
 		ModelTag:     input.ModelTag,
-		InstanceType: input.InstanceType,
+		InstanceType: spec.InstanceType,
 		UserIP:       input.UserIP,
 		APIKey:       input.APIKey,
 		TLSCert:      input.TLSCert,
 		TLSKey:       input.TLSKey,
-		EBSVolumeGB:  input.EBSVolumeGB,
+		EBSVolumeGB:  spec.EBSVolumeGB,
 		HFRepo:       input.HFRepo,
 		HFFile:       input.HFFile,
+		GPU:          spec.GPU,
 		Out:          p.out,
 	})
 	if err != nil {
 		return provider.DeployResult{}, err
 	}
 	return provider.DeployResult{
-		ProviderRef: result.StackName,
-		InstanceID:  result.InstanceID,
-		PublicIP:    result.PublicIP,
+		ProviderRef:  result.StackName,
+		InstanceID:   result.InstanceID,
+		PublicIP:     result.PublicIP,
+		InstanceType: spec.InstanceType,
+		GPU:          spec.GPU,
 	}, nil
 }
 

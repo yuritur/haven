@@ -16,14 +16,14 @@ var ollamaScript string
 var llamacppScript string
 
 type BootstrapInput struct {
-	Runtime      models.Runtime
-	Tag          string
-	APIKey       string
-	TLSCert      string
-	TLSKey       string
-	HFRepo       string
-	HFFile       string
-	InstanceType string
+	Runtime models.Runtime
+	Tag     string
+	APIKey  string
+	TLSCert string
+	TLSKey  string
+	HFRepo  string
+	HFFile  string
+	GPU     bool
 }
 
 func Generate(input BootstrapInput) (string, error) {
@@ -45,7 +45,7 @@ func Generate(input BootstrapInput) (string, error) {
 
 	case models.RuntimeLlamaCpp:
 		gpuLayers := ""
-		if models.IsGPUInstance(input.InstanceType) {
+		if input.GPU {
 			gpuLayers = "--n-gpu-layers -1"
 		}
 		r := strings.NewReplacer(

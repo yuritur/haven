@@ -82,14 +82,14 @@ func TestGenerate_LlamaCpp_ContainsSubstitutions(t *testing.T) {
 	tlsKey := "FAKE_KEY_DATA"
 
 	script, err := bootstrap.Generate(bootstrap.BootstrapInput{
-		Runtime:      models.RuntimeLlamaCpp,
-		Tag:          "llama3.2:1b",
-		APIKey:       apiKey,
-		TLSCert:      tlsCert,
-		TLSKey:       tlsKey,
-		HFRepo:       hfRepo,
-		HFFile:       hfFile,
-		InstanceType: "t3.large",
+		Runtime: models.RuntimeLlamaCpp,
+		Tag:     "llama3.2:1b",
+		APIKey:  apiKey,
+		TLSCert: tlsCert,
+		TLSKey:  tlsKey,
+		HFRepo:  hfRepo,
+		HFFile:  hfFile,
+		GPU:     false,
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

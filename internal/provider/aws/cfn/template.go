@@ -19,25 +19,26 @@ type TemplateInput struct {
 	EBSVolumeGB  int
 	HFRepo       string
 	HFFile       string
+	GPU          bool
 }
 
 func GenerateTemplate(input TemplateInput) (string, error) {
 	userData, err := bootstrap.Generate(bootstrap.BootstrapInput{
-		Runtime:      input.Runtime,
-		Tag:          input.ModelTag,
-		APIKey:       input.APIKey,
-		TLSCert:      input.TLSCert,
-		TLSKey:       input.TLSKey,
-		HFRepo:       input.HFRepo,
-		HFFile:       input.HFFile,
-		InstanceType: input.InstanceType,
+		Runtime: input.Runtime,
+		Tag:     input.ModelTag,
+		APIKey:  input.APIKey,
+		TLSCert: input.TLSCert,
+		TLSKey:  input.TLSKey,
+		HFRepo:  input.HFRepo,
+		HFFile:  input.HFFile,
+		GPU:     input.GPU,
 	})
 	if err != nil {
 		return "", fmt.Errorf("bootstrap script: %w", err)
 	}
 
 	amiSSMPath := "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-	if models.IsGPUInstance(input.InstanceType) {
+	if input.GPU {
 		amiSSMPath = "/aws/service/deeplearning/ami/x86_64/base-oss-nvidia-driver-gpu-amazon-linux-2023/latest/ami-id"
 	}
 
