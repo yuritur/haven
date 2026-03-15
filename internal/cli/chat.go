@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/havenapp/haven/internal/certutil"
+	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/tui"
 )
@@ -157,7 +158,7 @@ func resolveDeployment(ctx context.Context, prov provider.Provider, prompter pro
 }
 
 func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment, history []chatMessage) (string, error) {
-	if d.Runtime == "llamacpp" {
+	if d.Runtime == string(models.RuntimeLlamaCpp) {
 		return streamChatOpenAI(ctx, client, d, history)
 	}
 	return streamChatOllama(ctx, client, d, history)
@@ -216,6 +217,9 @@ func streamChatOllama(ctx context.Context, client *http.Client, d *provider.Depl
 	}
 	if err := scanner.Err(); err != nil {
 		return "", err
+	}
+	if first {
+		spin.Stop()
 	}
 	fmt.Print("\033[0m")
 	fmt.Println()
