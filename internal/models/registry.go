@@ -102,3 +102,12 @@ func List() []Config {
 	}
 	return result
 }
+
+func Names() []string {
+	names := make([]string, 0, len(registry))
+	for k := range registry {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	return names
+}

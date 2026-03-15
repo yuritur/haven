@@ -46,6 +46,19 @@ func TestResolveInstance_Known(t *testing.T) {
 	}
 }
 
+func TestResolveInstance_AllModelsResolvable(t *testing.T) {
+	for _, name := range models.Names() {
+		for _, rt := range []models.Runtime{models.RuntimeOllama, models.RuntimeLlamaCpp} {
+			t.Run(name+"_"+string(rt), func(t *testing.T) {
+				_, err := ResolveInstance(name, rt)
+				if err != nil {
+					t.Errorf("model %q registered in models.Names() but ResolveInstance fails: %v", name, err)
+				}
+			})
+		}
+	}
+}
+
 func TestResolveInstance_Unknown(t *testing.T) {
 	_, err := ResolveInstance("nonexistent:model", models.RuntimeOllama)
 	if err == nil {

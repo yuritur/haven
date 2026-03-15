@@ -11,6 +11,9 @@ import (
 
 var _ provider.CostEstimator = (*AWSProvider)(nil)
 
+// EstimateCost returns the estimated cost of a deployment based on
+// EC2, EBS, and EIP rates for us-east-1. On unknown instance types
+// it returns a partial estimate (with Uptime set) and an error.
 func (p *AWSProvider) EstimateCost(_ context.Context, d provider.Deployment) (*provider.CostEstimate, error) {
 	ebsGB := 30
 	rt := models.RuntimeOllama
@@ -36,6 +39,9 @@ func (p *AWSProvider) EstimateCost(_ context.Context, d provider.Deployment) (*p
 	}, nil
 }
 
+// ProjectCost extrapolates the deployment cost to the end of the current
+// calendar month. If the instance is stopped, only already-accrued compute
+// hours are counted; EBS and EIP are projected for the full month.
 func (p *AWSProvider) ProjectCost(_ context.Context, d provider.Deployment) (*provider.CostEstimate, error) {
 	ebsGB := 30
 	rt := models.RuntimeOllama
