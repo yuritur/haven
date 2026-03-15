@@ -81,7 +81,7 @@ func TestLlamaCppPort(t *testing.T) {
 }
 
 func TestNewLlamaCppRuntime(t *testing.T) {
-	rt, err := newRuntime(models.RuntimeLlamaCpp)
+	rt, err := newRuntime(models.LlamaCpp)
 	if err != nil {
 		t.Fatal(err)
 	}

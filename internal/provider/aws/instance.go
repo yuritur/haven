@@ -36,7 +36,7 @@ var instanceTable = map[string]struct {
 
 // runtime is accepted but not used yet — instance specs are identical across
 // runtimes today; kept as a parameter for future per-runtime differentiation.
-func ResolveInstance(model string, runtime models.Runtime) (InstanceSpec, error) {
+func ResolveInstance(model string, runtime models.RuntimeName) (InstanceSpec, error) {
 	entry, ok := instanceTable[model]
 	if !ok {
 		return InstanceSpec{}, fmt.Errorf("no instance mapping for model %q", model)

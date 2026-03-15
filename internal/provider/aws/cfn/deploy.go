@@ -18,7 +18,7 @@ import (
 
 type DeployInput struct {
 	StackName    string
-	Runtime      models.Runtime
+	Runtime      models.RuntimeName
 	ModelTag     string
 	InstanceType string
 	UserIP       string

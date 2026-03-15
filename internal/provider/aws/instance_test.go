@@ -9,23 +9,23 @@ import (
 func TestResolveInstance_Known(t *testing.T) {
 	cases := []struct {
 		model        string
-		runtime      models.Runtime
+		runtime      models.RuntimeName
 		wantInstance string
 		wantEBS      int
 		wantGPU      bool
 	}{
-		{"llama3.2:1b", models.RuntimeOllama, "t3.large", 30, false},
-		{"llama3.2:1b", models.RuntimeLlamaCpp, "t3.large", 30, false},
-		{"llama3.2:3b", models.RuntimeOllama, "t3.xlarge", 30, false},
-		{"llama3.2:3b", models.RuntimeLlamaCpp, "t3.xlarge", 30, false},
-		{"phi3:mini", models.RuntimeOllama, "t3.large", 30, false},
-		{"phi3:mini", models.RuntimeLlamaCpp, "t3.large", 30, false},
-		{"qwen3.5:4b", models.RuntimeOllama, "g5.xlarge", 80, true},
-		{"qwen3.5:4b", models.RuntimeLlamaCpp, "g5.xlarge", 80, true},
-		{"qwen3.5:9b", models.RuntimeOllama, "g5.xlarge", 100, true},
-		{"qwen3.5:9b", models.RuntimeLlamaCpp, "g5.xlarge", 100, true},
-		{"qwen3.5:27b", models.RuntimeOllama, "g5.2xlarge", 100, true},
-		{"qwen3.5:27b", models.RuntimeLlamaCpp, "g5.2xlarge", 100, true},
+		{"llama3.2:1b", models.Ollama, "t3.large", 30, false},
+		{"llama3.2:1b", models.LlamaCpp, "t3.large", 30, false},
+		{"llama3.2:3b", models.Ollama, "t3.xlarge", 30, false},
+		{"llama3.2:3b", models.LlamaCpp, "t3.xlarge", 30, false},
+		{"phi3:mini", models.Ollama, "t3.large", 30, false},
+		{"phi3:mini", models.LlamaCpp, "t3.large", 30, false},
+		{"qwen3.5:4b", models.Ollama, "g5.xlarge", 80, true},
+		{"qwen3.5:4b", models.LlamaCpp, "g5.xlarge", 80, true},
+		{"qwen3.5:9b", models.Ollama, "g5.xlarge", 100, true},
+		{"qwen3.5:9b", models.LlamaCpp, "g5.xlarge", 100, true},
+		{"qwen3.5:27b", models.Ollama, "g5.2xlarge", 100, true},
+		{"qwen3.5:27b", models.LlamaCpp, "g5.2xlarge", 100, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.model+"_"+string(tc.runtime), func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestResolveInstance_Known(t *testing.T) {
 
 func TestResolveInstance_AllModelsResolvable(t *testing.T) {
 	for _, name := range models.Names() {
-		for _, rt := range []models.Runtime{models.RuntimeOllama, models.RuntimeLlamaCpp} {
+		for _, rt := range []models.RuntimeName{models.Ollama, models.LlamaCpp} {
 			t.Run(name+"_"+string(rt), func(t *testing.T) {
 				_, err := ResolveInstance(name, rt)
 				if err != nil {
@@ -60,7 +60,7 @@ func TestResolveInstance_AllModelsResolvable(t *testing.T) {
 }
 
 func TestResolveInstance_Unknown(t *testing.T) {
-	_, err := ResolveInstance("nonexistent:model", models.RuntimeOllama)
+	_, err := ResolveInstance("nonexistent:model", models.Ollama)
 	if err == nil {
 		t.Fatal("expected error for unknown model, got nil")
 	}

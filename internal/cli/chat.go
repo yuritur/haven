@@ -158,7 +158,7 @@ func resolveDeployment(ctx context.Context, prov provider.Provider, prompter pro
 }
 
 func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment, history []chatMessage) (string, error) {
-	if d.Runtime == string(models.RuntimeLlamaCpp) {
+	if d.Runtime == string(models.LlamaCpp) {
 		return streamChatOpenAI(ctx, client, d, history)
 	}
 	return streamChatOllama(ctx, client, d, history)

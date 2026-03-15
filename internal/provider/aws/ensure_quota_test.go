@@ -23,7 +23,7 @@ func testProvider(region string) *AWSProvider {
 
 func TestEnsureQuota_NonGPUInstance(t *testing.T) {
 	p := &AWSProvider{}
-	err := p.EnsureQuota(context.Background(), "llama3.2:1b", models.RuntimeOllama, nil)
+	err := p.EnsureQuota(context.Background(), "llama3.2:1b", models.Ollama, nil)
 	if err != nil {
 		t.Fatalf("expected nil error for non-GPU model, got: %v", err)
 	}

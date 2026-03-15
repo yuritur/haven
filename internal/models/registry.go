@@ -6,11 +6,11 @@ import (
 	"strings"
 )
 
-type Runtime string
+type RuntimeName string
 
 const (
-	RuntimeOllama   Runtime = "ollama"
-	RuntimeLlamaCpp Runtime = "llamacpp"
+	Ollama   RuntimeName = "ollama"
+	LlamaCpp RuntimeName = "llamacpp"
 )
 
 type OllamaConfig struct {
@@ -27,11 +27,11 @@ type Config struct {
 	LlamaCpp *LlamaCppConfig
 }
 
-func (c Config) SupportsRuntime(rt Runtime) bool {
+func (c Config) SupportsRuntime(rt RuntimeName) bool {
 	switch rt {
-	case RuntimeOllama:
+	case Ollama:
 		return c.Ollama != nil
-	case RuntimeLlamaCpp:
+	case LlamaCpp:
 		return c.LlamaCpp != nil
 	}
 	return false

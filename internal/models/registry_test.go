@@ -71,43 +71,43 @@ func TestSupportsRuntime(t *testing.T) {
 	cases := []struct {
 		name    string
 		config  Config
-		runtime Runtime
+		runtime RuntimeName
 		want    bool
 	}{
 		{
 			"ollama supported",
 			Config{Ollama: &OllamaConfig{Tag: "test"}},
-			RuntimeOllama,
+			Ollama,
 			true,
 		},
 		{
 			"llamacpp supported",
 			Config{LlamaCpp: &LlamaCppConfig{HFRepo: "r", HFFile: "f"}},
-			RuntimeLlamaCpp,
+			LlamaCpp,
 			true,
 		},
 		{
 			"ollama not supported",
 			Config{LlamaCpp: &LlamaCppConfig{HFRepo: "r", HFFile: "f"}},
-			RuntimeOllama,
+			Ollama,
 			false,
 		},
 		{
 			"llamacpp not supported",
 			Config{Ollama: &OllamaConfig{Tag: "test"}},
-			RuntimeLlamaCpp,
+			LlamaCpp,
 			false,
 		},
 		{
 			"both supported ollama",
 			Config{Ollama: &OllamaConfig{Tag: "test"}, LlamaCpp: &LlamaCppConfig{HFRepo: "r", HFFile: "f"}},
-			RuntimeOllama,
+			Ollama,
 			true,
 		},
 		{
 			"unknown runtime",
 			Config{Ollama: &OllamaConfig{Tag: "test"}},
-			Runtime("vllm"),
+			RuntimeName("vllm"),
 			false,
 		},
 	}

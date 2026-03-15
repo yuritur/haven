@@ -14,13 +14,13 @@ type Runtime interface {
 	Port() int
 }
 
-func Resolve(modelName string, override models.Runtime) (Runtime, models.Runtime, error) {
+func Resolve(modelName string, override models.RuntimeName) (Runtime, models.RuntimeName, error) {
 	cfg, err := models.Lookup(modelName)
 	if err != nil {
 		return nil, "", err
 	}
 
-	var kind models.Runtime
+	var kind models.RuntimeName
 	if override != "" {
 		if !cfg.SupportsRuntime(override) {
 			return nil, "", fmt.Errorf("model %q does not support runtime %q", modelName, override)
@@ -29,9 +29,9 @@ func Resolve(modelName string, override models.Runtime) (Runtime, models.Runtime
 	} else {
 		switch {
 		case cfg.Ollama != nil:
-			kind = models.RuntimeOllama
+			kind = models.Ollama
 		case cfg.LlamaCpp != nil:
-			kind = models.RuntimeLlamaCpp
+			kind = models.LlamaCpp
 		default:
 			return nil, "", fmt.Errorf("model %q has no supported runtime", modelName)
 		}
@@ -44,11 +44,11 @@ func Resolve(modelName string, override models.Runtime) (Runtime, models.Runtime
 	return rt, kind, nil
 }
 
-func newRuntime(r models.Runtime) (Runtime, error) {
+func newRuntime(r models.RuntimeName) (Runtime, error) {
 	switch r {
-	case models.RuntimeOllama:
+	case models.Ollama:
 		return &OllamaRuntime{}, nil
-	case models.RuntimeLlamaCpp:
+	case models.LlamaCpp:
 		return &LlamaCppRuntime{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported runtime: %s", r)

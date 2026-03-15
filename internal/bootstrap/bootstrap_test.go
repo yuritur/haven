@@ -13,16 +13,16 @@ import (
 func TestGenerate_EmptyTLS(t *testing.T) {
 	cases := []struct {
 		name    string
-		runtime models.Runtime
+		runtime models.RuntimeName
 		tlsCert string
 		tlsKey  string
 	}{
-		{"ollama empty cert", models.RuntimeOllama, "", "somekey"},
-		{"ollama empty key", models.RuntimeOllama, "somecert", ""},
-		{"ollama both empty", models.RuntimeOllama, "", ""},
-		{"llamacpp empty cert", models.RuntimeLlamaCpp, "", "somekey"},
-		{"llamacpp empty key", models.RuntimeLlamaCpp, "somecert", ""},
-		{"llamacpp both empty", models.RuntimeLlamaCpp, "", ""},
+		{"ollama empty cert", models.Ollama, "", "somekey"},
+		{"ollama empty key", models.Ollama, "somecert", ""},
+		{"ollama both empty", models.Ollama, "", ""},
+		{"llamacpp empty cert", models.LlamaCpp, "", "somekey"},
+		{"llamacpp empty key", models.LlamaCpp, "somecert", ""},
+		{"llamacpp both empty", models.LlamaCpp, "", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -49,7 +49,7 @@ func TestGenerate_ContainsSubstitutions(t *testing.T) {
 	tlsKey := "FAKE_KEY_DATA"
 
 	script, err := bootstrap.Generate(bootstrap.BootstrapInput{
-		Runtime: models.RuntimeOllama,
+		Runtime: models.Ollama,
 		Tag:     tag,
 		APIKey:  apiKey,
 		TLSCert: tlsCert,
@@ -82,7 +82,7 @@ func TestGenerate_LlamaCpp_ContainsSubstitutions(t *testing.T) {
 	tlsKey := "FAKE_KEY_DATA"
 
 	script, err := bootstrap.Generate(bootstrap.BootstrapInput{
-		Runtime: models.RuntimeLlamaCpp,
+		Runtime: models.LlamaCpp,
 		Tag:     "llama3.2:1b",
 		APIKey:  apiKey,
 		TLSCert: tlsCert,
@@ -123,7 +123,7 @@ func TestGenerate_LlamaCpp_EmptyHF(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			script, err := bootstrap.Generate(bootstrap.BootstrapInput{
-				Runtime: models.RuntimeLlamaCpp,
+				Runtime: models.LlamaCpp,
 				Tag:     "llama3.2:1b",
 				APIKey:  "sk-test",
 				TLSCert: "cert",

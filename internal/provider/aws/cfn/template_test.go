@@ -12,7 +12,7 @@ func testInput() TemplateInput {
 	return TemplateInput{
 		UserIP:       "203.0.113.1/32",
 		APIKey:       "sk-haven-test",
-		Runtime:      models.RuntimeOllama,
+		Runtime:      models.Ollama,
 		ModelTag:     "llama3.2:1b",
 		InstanceType: "t3.large",
 		TLSCert:      "FAKE_CERT_PEM",

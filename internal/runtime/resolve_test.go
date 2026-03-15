@@ -11,8 +11,8 @@ func TestResolve_Default(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if kind != models.RuntimeOllama {
-		t.Errorf("kind = %q, want %q", kind, models.RuntimeOllama)
+	if kind != models.Ollama {
+		t.Errorf("kind = %q, want %q", kind, models.Ollama)
 	}
 	if serving == nil {
 		t.Fatal("expected non-nil Runtime")
@@ -20,12 +20,12 @@ func TestResolve_Default(t *testing.T) {
 }
 
 func TestResolve_Override(t *testing.T) {
-	serving, kind, err := Resolve("llama3.2:1b", models.RuntimeLlamaCpp)
+	serving, kind, err := Resolve("llama3.2:1b", models.LlamaCpp)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if kind != models.RuntimeLlamaCpp {
-		t.Errorf("kind = %q, want %q", kind, models.RuntimeLlamaCpp)
+	if kind != models.LlamaCpp {
+		t.Errorf("kind = %q, want %q", kind, models.LlamaCpp)
 	}
 	if serving == nil {
 		t.Fatal("expected non-nil Runtime")

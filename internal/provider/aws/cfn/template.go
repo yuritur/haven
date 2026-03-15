@@ -11,7 +11,7 @@ import (
 type TemplateInput struct {
 	UserIP       string
 	APIKey       string
-	Runtime      models.Runtime
+	Runtime      models.RuntimeName
 	ModelTag     string
 	InstanceType string
 	TLSCert      string

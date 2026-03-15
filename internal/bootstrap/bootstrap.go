@@ -16,7 +16,7 @@ var ollamaScript string
 var llamacppScript string
 
 type BootstrapInput struct {
-	Runtime models.Runtime
+	Runtime models.RuntimeName
 	Tag     string
 	APIKey  string
 	TLSCert string
@@ -34,7 +34,7 @@ func Generate(input BootstrapInput) (string, error) {
 	keyB64 := base64.StdEncoding.EncodeToString([]byte(input.TLSKey))
 
 	switch input.Runtime {
-	case models.RuntimeOllama:
+	case models.Ollama:
 		r := strings.NewReplacer(
 			"{{HAVEN_MODEL}}", input.Tag,
 			"{{HAVEN_API_KEY}}", input.APIKey,
@@ -43,7 +43,7 @@ func Generate(input BootstrapInput) (string, error) {
 		)
 		return r.Replace(ollamaScript), nil
 
-	case models.RuntimeLlamaCpp:
+	case models.LlamaCpp:
 		gpuLayers := ""
 		if input.GPU {
 			gpuLayers = "--n-gpu-layers -1"

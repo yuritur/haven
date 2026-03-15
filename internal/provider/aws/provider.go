@@ -80,9 +80,9 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 
 	var modelTag, hfRepo, hfFile string
 	switch input.Runtime {
-	case models.RuntimeOllama:
+	case models.Ollama:
 		modelTag = modelCfg.Ollama.Tag
-	case models.RuntimeLlamaCpp:
+	case models.LlamaCpp:
 		hfRepo = modelCfg.LlamaCpp.HFRepo
 		hfFile = modelCfg.LlamaCpp.HFFile
 	}

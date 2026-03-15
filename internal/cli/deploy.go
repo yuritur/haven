@@ -53,7 +53,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 }
 
 func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	serving, runtimeKind, err := runtime.Resolve(modelName, models.Runtime(runtimeFlag))
+	serving, runtimeKind, err := runtime.Resolve(modelName, models.RuntimeName(runtimeFlag))
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("save state: %w", err)
 	}
 
-	if runtimeKind == models.RuntimeLlamaCpp {
+	if runtimeKind == models.LlamaCpp {
 		fmt.Printf("Instance up at %s. Waiting for model...\n", result.PublicIP)
 	} else {
 		fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)

@@ -13,7 +13,7 @@ import (
 	"github.com/havenapp/haven/internal/tui"
 )
 
-func (p *AWSProvider) EnsureQuota(ctx context.Context, model string, runtime models.Runtime, prompter provider.Prompter) error {
+func (p *AWSProvider) EnsureQuota(ctx context.Context, model string, runtime models.RuntimeName, prompter provider.Prompter) error {
 	spec, err := ResolveInstance(model, runtime)
 	if err != nil {
 		return err
