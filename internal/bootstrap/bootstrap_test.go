@@ -22,7 +22,13 @@ func TestGenerate_EmptyTLS(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := bootstrap.Generate(models.RuntimeOllama, "llama3.2:1b", "sk-test", tc.tlsCert, tc.tlsKey)
+			_, err := bootstrap.Generate(bootstrap.BootstrapInput{
+				Runtime: models.RuntimeOllama,
+				Tag:     "llama3.2:1b",
+				APIKey:  "sk-test",
+				TLSCert: tc.tlsCert,
+				TLSKey:  tc.tlsKey,
+			})
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -36,7 +42,13 @@ func TestGenerate_ContainsSubstitutions(t *testing.T) {
 	tlsCert := "FAKE_CERT_DATA"
 	tlsKey := "FAKE_KEY_DATA"
 
-	script, err := bootstrap.Generate(models.RuntimeOllama, tag, apiKey, tlsCert, tlsKey)
+	script, err := bootstrap.Generate(bootstrap.BootstrapInput{
+		Runtime: models.RuntimeOllama,
+		Tag:     tag,
+		APIKey:  apiKey,
+		TLSCert: tlsCert,
+		TLSKey:  tlsKey,
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,8 +69,13 @@ func TestGenerate_ContainsSubstitutions(t *testing.T) {
 }
 
 func TestGenerate_UnsupportedRuntime(t *testing.T) {
-	// TLS values are non-empty so the TLS guard does not fire before the runtime check.
-	_, err := bootstrap.Generate("vllm", "llama3.2:1b", "sk-test", "cert", "key")
+	_, err := bootstrap.Generate(bootstrap.BootstrapInput{
+		Runtime: "vllm",
+		Tag:     "llama3.2:1b",
+		APIKey:  "sk-test",
+		TLSCert: "cert",
+		TLSKey:  "key",
+	})
 	if err == nil {
 		t.Fatal("expected error for unsupported runtime, got nil")
 	}

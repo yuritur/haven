@@ -24,10 +24,11 @@ import (
 )
 
 func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
-	return &cobra.Command{
+	var runtimeFlag string
+	cmd := &cobra.Command{
 		Use:     "deploy <model>",
 		Short:   "Deploy a model to your cloud",
-		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --provider aws",
+		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --runtime llamacpp",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return fmt.Errorf("missing model name\n\n  Usage: haven deploy <model>\n  Example: haven deploy llama3.2:1b")
@@ -44,13 +45,21 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runDeploy(cmd.Context(), prov, *providerName, args[0], *verbose, out, prompter)
+			return runDeploy(cmd.Context(), prov, *providerName, args[0], runtimeFlag, *verbose, out, prompter)
 		},
 	}
+	cmd.Flags().StringVar(&runtimeFlag, "runtime", "", "serving runtime: ollama (default) or llamacpp")
+	return cmd
 }
 
-func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	modelCfg, err := models.Lookup(modelName)
+func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
+	var modelCfg models.Config
+	var err error
+	if runtimeFlag != "" {
+		modelCfg, err = models.LookupWithRuntime(modelName, models.Runtime(runtimeFlag))
+	} else {
+		modelCfg, err = models.Lookup(modelName)
+	}
 	if err != nil {
 		return err
 	}
@@ -131,6 +140,8 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		TLSKey:         tlsKey,
 		TLSFingerprint: tlsFingerprint,
 		EBSVolumeGB:    modelCfg.EBSVolumeGB,
+		HFRepo:         modelCfg.HFRepo,
+		HFFile:         modelCfg.HFFile,
 	})
 
 	if spin != nil {
@@ -149,6 +160,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 	deployment := provider.Deployment{
 		ID:             deploymentID,
 		Provider:       providerName,
+		Runtime:        string(modelCfg.Runtime),
 		ProviderRef:    result.ProviderRef,
 		CreatedAt:      time.Now().UTC(),
 		Region:         identity.Region,
@@ -166,7 +178,11 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("save state: %w", err)
 	}
 
-	fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)
+	if modelCfg.Runtime == models.RuntimeLlamaCpp {
+		fmt.Printf("Instance up at %s. Waiting for model...\n", result.PublicIP)
+	} else {
+		fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)
+	}
 
 	if !verbose {
 		spin = tui.StartSpinner("Waiting for model to be ready...")

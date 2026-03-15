@@ -26,6 +26,8 @@ type DeployInput struct {
 	TLSCert      string
 	TLSKey       string
 	EBSVolumeGB  int
+	HFRepo       string
+	HFFile       string
 	Out          io.Writer
 }
 
@@ -45,6 +47,8 @@ func Deploy(ctx context.Context, cfg aws.Config, input DeployInput) (DeployResul
 		TLSCert:      input.TLSCert,
 		TLSKey:       input.TLSKey,
 		EBSVolumeGB:  input.EBSVolumeGB,
+		HFRepo:       input.HFRepo,
+		HFFile:       input.HFFile,
 	})
 	if err != nil {
 		return DeployResult{}, fmt.Errorf("generate template: %w", err)

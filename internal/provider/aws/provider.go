@@ -77,6 +77,8 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 		TLSCert:      input.TLSCert,
 		TLSKey:       input.TLSKey,
 		EBSVolumeGB:  input.EBSVolumeGB,
+		HFRepo:       input.HFRepo,
+		HFFile:       input.HFFile,
 		Out:          p.out,
 	})
 	if err != nil {

@@ -18,6 +18,8 @@ func New(r models.Runtime) (Runtime, error) {
 	switch r {
 	case models.RuntimeOllama:
 		return &OllamaRuntime{}, nil
+	case models.RuntimeLlamaCpp:
+		return &LlamaCppRuntime{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported runtime: %s", r)
 	}

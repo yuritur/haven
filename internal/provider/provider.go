@@ -37,6 +37,8 @@ type DeployInput struct {
 	TLSKey         string
 	TLSFingerprint string
 	EBSVolumeGB    int
+	HFRepo         string
+	HFFile         string
 }
 
 type DeployResult struct {
@@ -48,6 +50,7 @@ type DeployResult struct {
 type Deployment struct {
 	ID           string    `json:"deployment_id"`
 	Provider     string    `json:"provider"`
+	Runtime      string    `json:"runtime,omitempty"`
 	ProviderRef  string    `json:"provider_ref"`
 	CreatedAt    time.Time `json:"created_at"`
 	Region       string    `json:"region"`
