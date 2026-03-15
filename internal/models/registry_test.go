@@ -69,6 +69,42 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestLookupWithRuntime_LlamaCpp(t *testing.T) {
+	cfg, err := LookupWithRuntime("llama3.2:1b", RuntimeLlamaCpp)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Runtime != RuntimeLlamaCpp {
+		t.Errorf("Runtime = %q, want %q", cfg.Runtime, RuntimeLlamaCpp)
+	}
+	if cfg.HFRepo == "" {
+		t.Error("expected non-empty HFRepo")
+	}
+	if cfg.HFFile == "" {
+		t.Error("expected non-empty HFFile")
+	}
+}
+
+func TestLookupWithRuntime_Ollama(t *testing.T) {
+	cfg, err := LookupWithRuntime("llama3.2:1b", RuntimeOllama)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Runtime != RuntimeOllama {
+		t.Errorf("Runtime = %q, want %q", cfg.Runtime, RuntimeOllama)
+	}
+}
+
+func TestLookupWithRuntime_UnknownRuntime(t *testing.T) {
+	cfg, err := LookupWithRuntime("llama3.2:1b", "vllm")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Runtime != "vllm" {
+		t.Errorf("Runtime = %q, want %q", cfg.Runtime, Runtime("vllm"))
+	}
+}
+
 func TestIsGPUInstance(t *testing.T) {
 	cases := []struct {
 		instanceType string
