@@ -103,6 +103,27 @@ func List() []Config {
 	return result
 }
 
+func ResolveRuntime(name string, override Runtime) (Config, Runtime, error) {
+	cfg, err := Lookup(name)
+	if err != nil {
+		return Config{}, "", err
+	}
+	if override != "" {
+		if !cfg.SupportsRuntime(override) {
+			return Config{}, "", fmt.Errorf("model %q does not support runtime %q", name, override)
+		}
+		return cfg, override, nil
+	}
+	switch {
+	case cfg.Ollama != nil:
+		return cfg, RuntimeOllama, nil
+	case cfg.LlamaCpp != nil:
+		return cfg, RuntimeLlamaCpp, nil
+	default:
+		return Config{}, "", fmt.Errorf("model %q has no supported runtime", name)
+	}
+}
+
 func Names() []string {
 	names := make([]string, 0, len(registry))
 	for k := range registry {

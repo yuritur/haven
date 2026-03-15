@@ -53,31 +53,9 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 }
 
 func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	modelCfg, err := models.Lookup(modelName)
+	modelCfg, effectiveRuntime, err := models.ResolveRuntime(modelName, models.Runtime(runtimeFlag))
 	if err != nil {
 		return err
-	}
-
-	var effectiveRuntime models.Runtime
-	if runtimeFlag != "" {
-		rt := models.Runtime(runtimeFlag)
-		switch rt {
-		case models.RuntimeOllama, models.RuntimeLlamaCpp:
-		default:
-			return fmt.Errorf("invalid runtime %q — valid options: ollama, llamacpp", runtimeFlag)
-		}
-		if !modelCfg.SupportsRuntime(rt) {
-			return fmt.Errorf("model %q does not support runtime %q", modelName, runtimeFlag)
-		}
-		effectiveRuntime = rt
-	} else {
-		if modelCfg.Ollama != nil {
-			effectiveRuntime = models.RuntimeOllama
-		} else if modelCfg.LlamaCpp != nil {
-			effectiveRuntime = models.RuntimeLlamaCpp
-		} else {
-			return fmt.Errorf("model %q has no supported runtime", modelName)
-		}
 	}
 
 	var modelTag string

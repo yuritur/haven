@@ -67,6 +67,43 @@ func TestList(t *testing.T) {
 	}
 }
 
+func TestResolveRuntime_Default(t *testing.T) {
+	_, rt, err := ResolveRuntime("llama3.2:1b", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rt != RuntimeOllama {
+		t.Errorf("default runtime = %q, want %q", rt, RuntimeOllama)
+	}
+}
+
+func TestResolveRuntime_Override(t *testing.T) {
+	cfg, rt, err := ResolveRuntime("llama3.2:1b", RuntimeLlamaCpp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rt != RuntimeLlamaCpp {
+		t.Errorf("runtime = %q, want %q", rt, RuntimeLlamaCpp)
+	}
+	if cfg.LlamaCpp == nil {
+		t.Fatal("expected non-nil LlamaCpp config")
+	}
+}
+
+func TestResolveRuntime_UnsupportedRuntime(t *testing.T) {
+	_, _, err := ResolveRuntime("llama3.2:1b", "vllm")
+	if err == nil {
+		t.Fatal("expected error for unsupported runtime")
+	}
+}
+
+func TestResolveRuntime_UnknownModel(t *testing.T) {
+	_, _, err := ResolveRuntime("nonexistent", "")
+	if err == nil {
+		t.Fatal("expected error for unknown model")
+	}
+}
+
 func TestSupportsRuntime(t *testing.T) {
 	cases := []struct {
 		name    string
