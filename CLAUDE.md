@@ -41,7 +41,7 @@ Haven is a CLI tool that deploys open-source LLM models to the user's AWS accoun
 4. Generate self-signed TLS cert (ECDSA P-256) + API key + deployment ID
 5. Generate CloudFormation template and create stack (VPC, Subnet, IGW, SG, EC2, EIP, IAM)
 6. Poll stack events until complete
-7. Poll `GET /api/tags` on the Ollama endpoint via pinned TLS until the model is ready (~3–15 min)
+7. Poll the runtime's health endpoint (Ollama: `/api/tags`, llama.cpp: `/v1/models`) via pinned TLS until the model is ready (~3–15 min)
 8. Save deployment state JSON to S3, print endpoint + API key + TLS fingerprint
 
 **Key design constraints:**
@@ -57,8 +57,9 @@ Haven is a CLI tool that deploys open-source LLM models to the user's AWS accoun
 - `internal/provider/aws/` — AWS provider: credentials, S3 bootstrap, S3 state store
 - `internal/provider/aws/cfn/` — CloudFormation template generation, stack create/poll, stack delete/poll
 - `internal/provider/mock/` — mock Provider and StateStore for unit tests
-- `internal/models/` — model name → `{Runtime, Tag, InstanceType, MinRAMGB}` registry
-- `internal/bootstrap/` — EC2 user data script generation (embeds `ollama.sh` template)
+- `internal/models/` — model name → `{Runtime, Tag, InstanceType, MinRAMGB}` registry; each model can support `ollama` and/or `llamacpp`
+- `internal/runtime/` — `Runtime` interface (Ollama, LlamaCpp); `Resolve(model, override)` picks runtime; health check, chat path, and wire format differ per runtime
+- `internal/bootstrap/` — EC2 user data script generation (embeds per-runtime scripts: `ollama.sh`, `llamacpp.sh`)
 - `internal/certutil/` — self-signed TLS cert generation (ECDSA P-256), fingerprint-pinned `http.Transport`
 - `internal/tui/` — terminal spinner for provisioning feedback
 

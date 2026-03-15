@@ -36,6 +36,8 @@ Haven provisions a cloud instance, sets up the model behind an encrypted reverse
 
 *Prices are approximate AWS on-demand rates for us-east-1.*
 
+Models can be served by **Ollama** or **llama.cpp**. The default is llama.cpp when the model supports it; use `--runtime ollama` to force Ollama (e.g. `haven deploy llama3.2:1b --runtime ollama`).
+
 ## Install
 
 ### macOS / Linux (Homebrew)
@@ -67,9 +69,22 @@ haven chat
 # List deployments
 haven status
 
+# Estimated and actual cost for a deployment
+haven cost [deployment-id]
+
+# Stop instance (pay less while stopped), start when needed
+haven stop [deployment-id]
+haven start [deployment-id]
+
 # Tear down
 haven destroy <deployment-id>
 ```
+
+## Cost
+
+**`haven cost`** shows estimated cost for a deployment: uptime, estimated total so far, projected cost to end of month, and actual from provider-billing when available. If you have only one deployment, you can run `haven cost` without an ID.
+
+To pay less when you're not using a deployment, **stop** it with `haven stop` — the instance is stopped and you only pay the small ongoing charges (e.g. disk, reserved IP; exact items depend on the provider). Use **`haven start`** to bring it back when needed.
 
 ## GPU models and vCPU quotas
 

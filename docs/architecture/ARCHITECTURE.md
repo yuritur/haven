@@ -16,8 +16,8 @@ haven deploy llama3.2:1b
   ├─ 4. CloudFormation CreateStack
   │     └─ creates: VPC, Subnet, IGW, Route table, SG, EC2 (t3.large), EIP, IAM role
   ├─ 5. Poll stack events + show progress to user
-  ├─ 6. EC2 runs user_data bootstrap            (~3–5 min: install Ollama, pull model)
-  ├─ 7. Poll /api/tags (Ollama health) via HTTP until ready
+  ├─ 6. EC2 runs user_data bootstrap            (per-runtime: Ollama pull or llama.cpp + GGUF download)
+  ├─ 7. Poll runtime health (Ollama: /api/tags, llama.cpp: /v1/models) via TLS until ready
   └─ 8. Save state JSON to S3, print endpoint URL + API key
 ```
 
@@ -30,21 +30,20 @@ cmd/haven/
   main.go                    # entry point
 
 internal/
-  aws/
-    credentials.go           # STS GetCallerIdentity, region detection
-    bootstrap.go             # Create S3 state bucket once per account
-  cfn/
-    template.go              # Generate CloudFormation JSON template
-    deploy.go                # CreateStack, poll events, wait for complete
-    destroy.go               # DeleteStack, wait for complete
+  cli/                       # cobra: deploy, destroy, status, cert, login, chat
+  provider/
+    provider.go             # Provider + StateStore interfaces, Deployment struct
+    aws/                    # AWS: credentials, S3 bootstrap, S3 state, instance/cost
+      cfn/                  # CloudFormation template, create/poll, delete/poll
   models/
-    registry.go              # model name → instance type + ollama pull tag
-  state/
-    manager.go               # read/write deployment JSON to S3
-  cli/
-    deploy.go                # haven deploy <model> command
-    destroy.go               # haven destroy <id> command
-    status.go                # haven status command
+    registry.go             # model name → Config (Ollama tag and/or LlamaCpp GGUF); SupportsRuntime(rt)
+  runtime/
+    runtime.go              # Runtime interface; Resolve(model, override) → Runtime + kind
+    ollama.go, llamacpp.go  # health path, chat path, wire format, WaitForReady
+  bootstrap/
+    bootstrap.go            # user_data generation; dispatches by runtime (ollama.sh / llamacpp.sh)
+  certutil/                 # TLS cert, fingerprint-pinned transport
+  tui/                      # spinner for deploy feedback
 ```
 
 ---
@@ -56,7 +55,7 @@ internal/
 | VPC | /16 CIDR, DNS hostnames enabled |
 | Public subnet | /24, auto-assign public IP |
 | Internet Gateway | 1 per VPC |
-| Security Group | Inbound: 11434/tcp (Ollama) from user IP. Outbound: all |
+| Security Group | Inbound: 11434/tcp (runtime) from user IP. Outbound: all |
 | EC2 instance | t3.large, Amazon Linux 2023 AMI |
 | EBS root volume | gp3, 30 GB, encrypted at rest |
 | Elastic IP | Stable public IP, survives instance stop/start |
@@ -67,11 +66,23 @@ internal/
 
 ---
 
-## Serving backends
+## Serving runtimes
 
-| Tier | Instance | Backend | Models |
+Haven supports multiple runtimes per model. The registry (`internal/models`) defines for each model which runtimes are supported (Ollama and/or llama.cpp). Default is llama.cpp when available; user can override with `--runtime ollama`.
+
+| Runtime | Health path | Chat path | Use case |
+|---------|-------------|-----------|----------|
+| **ollama** | `/api/tags` | `/api/chat` | Ease of use, Ollama ecosystem |
+| **llamacpp** | `/v1/models` | `/v1/chat/completions` | OpenAI-compatible API, GGUF from Hugging Face |
+
+Instance type and resources are the same for both runtimes today; bootstrap script and readiness check differ. See ADR-007.
+
+## Serving backends (tiers)
+
+| Tier | Instance | Runtimes | Models |
 |---|---|---|---|
-| MVP | t3.large | Ollama (CPU) | Llama 3.2 1B, Phi 3 mini |
+| CPU | t3.large | ollama, llamacpp | Llama 3.2 1B/3B, Phi 3 mini, Qwen 3.5 4B/9B/27B (quantized) |
+| GPU | g5.xlarge | ollama, llamacpp | Qwen 3.5 (larger quants / GPU) |
 
 ---
 
@@ -81,18 +92,20 @@ Deployment state is stored as JSON in S3 at `s3://haven-state-{account_id}/deplo
 
 ```json
 {
-  "deployment_id": "haven-abc123",
-  "created_at": "2026-03-01T12:00:00Z",
-  "region": "us-east-1",
-  "stack_name": "haven-abc123",
+  "id": "haven-abc123",
+  "provider": "aws",
+  "provider_ref": "stack name / resource id",
   "model": "llama3.2:1b",
+  "runtime": "llamacpp",
   "instance_type": "t3.large",
-  "resources": {
-    "instance_id": "i-0abc...",
-    "eip": "1.2.3.4"
-  },
-  "endpoint": "http://1.2.3.4:11434/v1",
-  "api_key": "sk-haven-..."
+  "instance_id": "i-0abc...",
+  "public_ip": "1.2.3.4",
+  "endpoint": "https://1.2.3.4:11434",
+  "api_key": "sk-haven-...",
+  "tls_cert": "...",
+  "tls_fingerprint": "...",
+  "region": "us-east-1",
+  "created_at": "2026-03-01T12:00:00Z"
 }
 ```
 
@@ -102,7 +115,7 @@ Deployment state is stored as JSON in S3 at `s3://haven-state-{account_id}/deplo
 
 | Concern | Mitigation |
 |---|---|
-| API authentication | Ollama `--api-key` (Bearer token) |
+| API authentication | Runtime API key (Bearer token); Ollama via proxy, llama.cpp native |
 | Network access | Security Group restricts port 11434 to user's IP |
 | Instance access | SSM only — no SSH, no port 22 |
 | Data at rest | EBS encrypted (AES-256) |
@@ -121,4 +134,5 @@ Deployment state is stored as JSON in S3 at `s3://haven-state-{account_id}/deplo
 | ADR-003 | S3 JSON state (no DynamoDB) | Simpler state management for MVP, versioning for auditability, no locking overhead |
 | ADR-004 | SSM over SSH | No open ports, auto-logged, cleaner security group |
 | ADR-005 | HTTP in MVP | Simpler, TLS deferred to v0.2 |
-| ADR-006 | Ollama `--api-key` for POC | Lightweight CPU-based serving, rapid iteration over GPU optimization |
+| ADR-006 | vLLM / Ollama API key | Native or proxy auth for API endpoints |
+| ADR-007 | Multiple runtimes (Ollama, llama.cpp) | Per-model backend choice, default llamacpp; health/chat paths differ by runtime |
