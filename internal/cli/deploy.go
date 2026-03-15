@@ -56,6 +56,11 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 	var modelCfg models.Config
 	var err error
 	if runtimeFlag != "" {
+		switch models.Runtime(runtimeFlag) {
+		case models.RuntimeOllama, models.RuntimeLlamaCpp:
+		default:
+			return fmt.Errorf("invalid runtime %q — valid options: ollama, llamacpp", runtimeFlag)
+		}
 		modelCfg, err = models.LookupWithRuntime(modelName, models.Runtime(runtimeFlag))
 	} else {
 		modelCfg, err = models.Lookup(modelName)

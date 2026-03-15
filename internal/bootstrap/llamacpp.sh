@@ -10,7 +10,17 @@ chmod 600 /etc/haven/server.key
 
 echo "Installing llama-server..."
 LLAMA_CPP_VERSION="b5200"
-curl -fsSL "https://github.com/ggerganov/llama.cpp/releases/download/${LLAMA_CPP_VERSION}/llama-${LLAMA_CPP_VERSION}-bin-ubuntu-x64.zip" -o /tmp/llama.zip
+# Ubuntu prebuilt binary is glibc-based and compatible with Amazon Linux 2023,
+# which also uses glibc. It is the most commonly available prebuilt release.
+for i in $(seq 1 5); do
+    curl -fsSL "https://github.com/ggerganov/llama.cpp/releases/download/${LLAMA_CPP_VERSION}/llama-${LLAMA_CPP_VERSION}-bin-ubuntu-x64.zip" -o /tmp/llama.zip && break
+    echo "Download attempt $i failed, retrying in 10s..."
+    if [ "$i" -eq 5 ]; then
+        echo "ERROR: llama-server download failed after 5 attempts, aborting."
+        exit 1
+    fi
+    sleep 10
+done
 dnf install -y unzip
 unzip -o /tmp/llama.zip -d /opt/llama-cpp/
 chmod +x /opt/llama-cpp/build/bin/llama-server
@@ -27,8 +37,7 @@ ExecStart=/opt/llama-cpp/build/bin/llama-server \
     --hf-repo {{HAVEN_HF_REPO}} \
     --hf-file {{HAVEN_HF_FILE}} \
     --api-key {{HAVEN_API_KEY}} \
-    {{HAVEN_GPU_LAYERS}} \
-    --ctx-size 4096
+    --ctx-size 4096 {{HAVEN_GPU_LAYERS}}
 Restart=on-failure
 RestartSec=5
 
