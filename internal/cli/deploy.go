@@ -53,7 +53,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 }
 
 func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	modelCfg, effectiveRuntime, err := models.ResolveRuntime(modelName, models.Runtime(runtimeFlag))
+	modelCfg, effectiveRuntime, err := runtime.Resolve(modelName, models.Runtime(runtimeFlag))
 	if err != nil {
 		return err
 	}
