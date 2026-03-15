@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,9 +12,52 @@ import (
 	"github.com/havenapp/haven/internal/certutil"
 )
 
+type openAIChatRequest struct {
+	Model    string        `json:"model"`
+	Messages []ChatMessage `json:"messages"`
+	Stream   bool          `json:"stream"`
+}
+
+type openAIStreamChunk struct {
+	Choices []struct {
+		Delta struct {
+			Content string `json:"content"`
+		} `json:"delta"`
+		FinishReason *string `json:"finish_reason"`
+	} `json:"choices"`
+}
+
 type LlamaCppRuntime struct{}
 
 func (l *LlamaCppRuntime) Port() int { return 11434 }
+
+func (l *LlamaCppRuntime) ChatPath() string { return "/v1/chat/completions" }
+
+func (l *LlamaCppRuntime) MarshalChatRequest(model string, history []ChatMessage) ([]byte, error) {
+	return json.Marshal(openAIChatRequest{Model: model, Messages: history, Stream: true})
+}
+
+func (l *LlamaCppRuntime) ParseChatToken(line []byte) (string, bool, error) {
+	prefix := []byte("data: ")
+	if !bytes.HasPrefix(line, prefix) {
+		return "", false, nil
+	}
+
+	data := bytes.TrimPrefix(line, prefix)
+	if string(data) == "[DONE]" {
+		return "", true, nil
+	}
+
+	var chunk openAIStreamChunk
+	if err := json.Unmarshal(data, &chunk); err != nil {
+		return "", false, fmt.Errorf("decode stream: %w", err)
+	}
+
+	if len(chunk.Choices) == 0 {
+		return "", false, nil
+	}
+	return chunk.Choices[0].Delta.Content, false, nil
+}
 
 func (l *LlamaCppRuntime) WaitForReady(ctx context.Context, endpoint, model, apiKey, tlsFingerprint string, verbose io.Writer, timeout time.Duration) error {
 	client := &http.Client{

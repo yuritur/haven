@@ -53,7 +53,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 }
 
 func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	serving, runtimeKind, err := runtime.Resolve(modelName, models.RuntimeName(runtimeFlag))
+	runtime, runtimeKind, err := runtime.Resolve(modelName, models.RuntimeName(runtimeFlag))
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 
 	fmt.Printf("\033[33mUsing instance:\033[0m %s\n", result.InstanceType)
 
-	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, serving.Port())
+	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, runtime.Port())
 
 	deployment := provider.Deployment{
 		ID:             deploymentID,
@@ -180,7 +180,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		pollTimeout = 30 * time.Minute
 	}
 
-	if err := serving.WaitForReady(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
+	if err := runtime.WaitForReady(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
 		if spin != nil {
 			spin.Stop()
 		}
