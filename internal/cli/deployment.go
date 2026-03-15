@@ -29,7 +29,7 @@ func resolveDeployment(ctx context.Context, prov provider.Provider, prompter pro
 
 	options := make([]string, len(deployments))
 	for i, d := range deployments {
-		options[i] = fmt.Sprintf("%s (%s)", d.ID, d.Model)
+		options[i] = fmt.Sprintf("%s (%s [%s])", d.ID, d.Model, d.Runtime)
 	}
 	idx := prompter.Select("Select a deployment:", options)
 	if idx < 0 {

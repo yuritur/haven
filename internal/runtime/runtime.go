@@ -42,10 +42,10 @@ func Resolve(modelName string, override models.RuntimeName) (Runtime, models.Run
 		kind = override
 	} else {
 		switch {
-		case cfg.Ollama != nil:
-			kind = models.Ollama
 		case cfg.LlamaCpp != nil:
 			kind = models.LlamaCpp
+		case cfg.Ollama != nil:
+			kind = models.Ollama
 		default:
 			return nil, "", fmt.Errorf("model %q has no supported runtime", modelName)
 		}

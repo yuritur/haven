@@ -48,7 +48,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			return runDeploy(cmd.Context(), prov, *providerName, args[0], runtimeFlag, *verbose, out, prompter)
 		},
 	}
-	cmd.Flags().StringVar(&runtimeFlag, "runtime", "", "serving runtime: ollama (default) or llamacpp")
+	cmd.Flags().StringVar(&runtimeFlag, "runtime", "", "serving runtime: llamacpp (default) or ollama")
 	return cmd
 }
 
@@ -95,7 +95,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return err
 	}
 
-	fmt.Printf("\033[33mDeploying\033[0m %s (id: %s)...\n\n", modelName, deploymentID)
+	fmt.Printf("\033[33mDeploying\033[0m %s [%s] (id: %s)...\n\n", modelName, runtimeKind, deploymentID)
 
 	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -207,6 +207,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 
 	fmt.Printf("\n\033[33mDeployment ready!\033[0m\n")
 	fmt.Printf("  Endpoint : %s\n", deployment.Endpoint)
+	fmt.Printf("  Runtime  : %s\n", deployment.Runtime)
 	fmt.Printf("  API Key  : %s\n", deployment.APIKey)
 	fmt.Printf("  TLS Cert : %s\n", certFile)
 	fmt.Printf("  ID       : %s\n\n", deployment.ID)

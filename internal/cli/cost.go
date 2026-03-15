@@ -53,7 +53,7 @@ func runCost(ctx context.Context, prov provider.Provider, id string, w io.Writer
 	o := func(s string) string { return "\033[38;5;208m" + s + "\033[0m" }
 
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "Cost for %s (%s on %s, %s)\n", y(d.ID), y(d.Model), y(d.InstanceType), o(d.Provider))
+	fmt.Fprintf(&buf, "Cost for %s (%s [%s] on %s, %s)\n", y(d.ID), y(d.Model), y(d.Runtime), y(d.InstanceType), o(d.Provider))
 
 	ce, ok := prov.(provider.CostEstimator)
 	if !ok {

@@ -44,8 +44,8 @@ func runStatus(ctx context.Context, prov provider.Provider, spinner *tui.Spinner
 		return nil
 	}
 
-	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %-9s  %-10s  %s\033[0m\n", "ID", "CLOUD", "MODEL", "INSTANCE", "STATE", "EST.COST", "ENDPOINT")
-	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-12s  %-9s  %-10s  %s\033[0m\n", "--------------------", "------", "--------------", "------------", "---------", "----------", "--------")
+	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-8s  %-12s  %-9s  %-10s  %s\033[0m\n", "ID", "CLOUD", "MODEL", "RUNTIME", "INSTANCE", "STATE", "EST.COST", "ENDPOINT")
+	fmt.Printf("\033[33m%-20s  %-6s  %-14s  %-8s  %-12s  %-9s  %-10s  %s\033[0m\n", "--------------------", "------", "--------------", "--------", "------------", "---------", "----------", "--------")
 
 	ce, hasCost := prov.(provider.CostEstimator)
 	for _, d := range deployments {
@@ -61,7 +61,7 @@ func runStatus(ctx context.Context, prov provider.Provider, spinner *tui.Spinner
 			}
 		}
 
-		fmt.Printf("%-20s  %-6s  %-14s  %-12s  %-9s  %-10s  %s\n", d.ID, d.Provider, d.Model, d.InstanceType, state, costStr, d.Endpoint)
+		fmt.Printf("%-20s  %-6s  %-14s  %-8s  %-12s  %-9s  %-10s  %s\n", d.ID, d.Provider, d.Model, d.Runtime, d.InstanceType, state, costStr, d.Endpoint)
 	}
 	return nil
 }

@@ -11,8 +11,8 @@ func TestResolve_Default(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if kind != models.Ollama {
-		t.Errorf("kind = %q, want %q", kind, models.Ollama)
+	if kind != models.LlamaCpp {
+		t.Errorf("kind = %q, want %q", kind, models.LlamaCpp)
 	}
 	if serving == nil {
 		t.Fatal("expected non-nil Runtime")

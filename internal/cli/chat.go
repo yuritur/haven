@@ -54,7 +54,7 @@ func runChat(ctx context.Context, prov provider.Provider, prompter provider.Prom
 		Transport: certutil.NewPinnedTransport(d.TLSFingerprint),
 	}
 
-	fmt.Printf("\033[1m%s\033[0m @ %s\n", d.Model, d.Endpoint)
+	fmt.Printf("\033[1m%s\033[0m [%s] @ %s\n", d.Model, d.Runtime, d.Endpoint)
 	fmt.Println("Type a message, or \"exit\" to quit.")
 	fmt.Println()
 
