@@ -30,14 +30,11 @@ type DeployInput struct {
 	DeploymentID   string
 	Runtime        models.Runtime
 	Model          string
-	ModelTag       string
 	UserIP         string
 	APIKey         string
 	TLSCert        string
 	TLSKey         string
 	TLSFingerprint string
-	HFRepo         string
-	HFFile         string
 }
 
 type DeployResult struct {

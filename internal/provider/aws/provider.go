@@ -7,6 +7,7 @@ import (
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 
+	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/provider/aws/cfn"
 	"github.com/havenapp/haven/internal/provider/aws/quota"
@@ -72,18 +73,32 @@ func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (p
 		return provider.DeployResult{}, err
 	}
 
+	modelCfg, err := models.Lookup(input.Model)
+	if err != nil {
+		return provider.DeployResult{}, err
+	}
+
+	var modelTag, hfRepo, hfFile string
+	switch input.Runtime {
+	case models.RuntimeOllama:
+		modelTag = modelCfg.Ollama.Tag
+	case models.RuntimeLlamaCpp:
+		hfRepo = modelCfg.LlamaCpp.HFRepo
+		hfFile = modelCfg.LlamaCpp.HFFile
+	}
+
 	result, err := cfn.Deploy(ctx, p.cfg, cfn.DeployInput{
 		StackName:    input.DeploymentID,
 		Runtime:      input.Runtime,
-		ModelTag:     input.ModelTag,
+		ModelTag:     modelTag,
 		InstanceType: spec.InstanceType,
 		UserIP:       input.UserIP,
 		APIKey:       input.APIKey,
 		TLSCert:      input.TLSCert,
 		TLSKey:       input.TLSKey,
 		EBSVolumeGB:  spec.EBSVolumeGB,
-		HFRepo:       input.HFRepo,
-		HFFile:       input.HFFile,
+		HFRepo:       hfRepo,
+		HFFile:       hfFile,
 		GPU:          spec.GPU,
 		Out:          p.out,
 	})

@@ -53,7 +53,7 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 }
 
 func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	serving, err := runtime.Resolve(modelName, models.Runtime(runtimeFlag))
+	serving, runtimeKind, err := runtime.Resolve(modelName, models.Runtime(runtimeFlag))
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("generate deployment ID: %w", err)
 	}
 
-	err = prov.EnsureQuota(ctx, modelName, serving.Kind, prompter)
+	err = prov.EnsureQuota(ctx, modelName, runtimeKind, prompter)
 	switch {
 	case errors.Is(err, provider.ErrQuotaUserExit):
 		return nil
@@ -120,16 +120,13 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 
 	result, err := prov.Deploy(sigCtx, provider.DeployInput{
 		DeploymentID:   deploymentID,
-		Runtime:        serving.Kind,
+		Runtime:        runtimeKind,
 		Model:          modelName,
-		ModelTag:       serving.ModelTag,
 		UserIP:         userIP + "/32",
 		APIKey:         apiKey,
 		TLSCert:        tlsCert,
 		TLSKey:         tlsKey,
 		TLSFingerprint: tlsFingerprint,
-		HFRepo:         serving.HFRepo,
-		HFFile:         serving.HFFile,
 	})
 
 	if spin != nil {
@@ -145,12 +142,12 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 
 	fmt.Printf("\033[33mUsing instance:\033[0m %s\n", result.InstanceType)
 
-	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, serving.Runtime.Port())
+	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, serving.Port())
 
 	deployment := provider.Deployment{
 		ID:             deploymentID,
 		Provider:       providerName,
-		Runtime:        string(serving.Kind),
+		Runtime:        string(runtimeKind),
 		ProviderRef:    result.ProviderRef,
 		CreatedAt:      time.Now().UTC(),
 		Region:         identity.Region,
@@ -168,7 +165,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("save state: %w", err)
 	}
 
-	if serving.Kind == models.RuntimeLlamaCpp {
+	if runtimeKind == models.RuntimeLlamaCpp {
 		fmt.Printf("Instance up at %s. Waiting for model...\n", result.PublicIP)
 	} else {
 		fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)
@@ -183,7 +180,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		pollTimeout = 30 * time.Minute
 	}
 
-	if err := serving.Runtime.WaitForReady(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
+	if err := serving.WaitForReady(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
 		if spin != nil {
 			spin.Stop()
 		}
