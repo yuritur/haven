@@ -82,7 +82,20 @@ haven destroy <deployment-id>
 
 ## Cost
 
-**`haven cost`** shows estimated cost for a deployment: uptime, estimated total so far, projected cost to end of month, and actual from provider-billing when available. If you have only one deployment, you can run `haven cost` without an ID.
+**`haven cost`** shows estimated cost for a deployment. If you have only one deployment, you can run `haven cost` without an ID.
+
+```
+$ haven cost haven-a1b2c3d4
+Cost for haven-a1b2c3d4 (llama3.2:1b [ollama] on t3.large, aws)
+Uptime:     2d 5h 13m
+Estimated:  $4.43
+Projected:  $27.80  (to end of month)
+Actual:     $3.97  (billing)
+```
+
+- **Estimated** — calculated locally from on-demand rates (compute, storage, IP) for your region multiplied by actual uptime (excludes time the instance was stopped).
+- **Projected** — extrapolates to the end of the current calendar month. If the instance is stopped, only already-accrued compute hours count; storage and IP charges are projected for the full month.
+- **Actual** — real spend from the provider's billing API. Billing data lags ~24 h, so for fresh deployments this will show `pending`.
 
 To pay less when you're not using a deployment, **stop** it with `haven stop` — the instance is stopped and you only pay the small ongoing charges (e.g. disk, reserved IP; exact items depend on the provider). Use **`haven start`** to bring it back when needed.
 
