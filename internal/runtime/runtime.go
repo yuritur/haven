@@ -14,28 +14,54 @@ type Runtime interface {
 	Port() int
 }
 
-func Resolve(modelName string, override models.Runtime) (models.Config, models.Runtime, error) {
-	cfg, err := models.Lookup(modelName)
-	if err != nil {
-		return models.Config{}, "", err
-	}
-	if override != "" {
-		if !cfg.SupportsRuntime(override) {
-			return models.Config{}, "", fmt.Errorf("model %q does not support runtime %q", modelName, override)
-		}
-		return cfg, override, nil
-	}
-	switch {
-	case cfg.Ollama != nil:
-		return cfg, models.RuntimeOllama, nil
-	case cfg.LlamaCpp != nil:
-		return cfg, models.RuntimeLlamaCpp, nil
-	default:
-		return models.Config{}, "", fmt.Errorf("model %q has no supported runtime", modelName)
-	}
+type Resolved struct {
+	Runtime  Runtime
+	Kind     models.Runtime
+	ModelTag string
+	HFRepo   string
+	HFFile   string
 }
 
-func New(r models.Runtime) (Runtime, error) {
+func Resolve(modelName string, override models.Runtime) (Resolved, error) {
+	cfg, err := models.Lookup(modelName)
+	if err != nil {
+		return Resolved{}, err
+	}
+
+	var kind models.Runtime
+	if override != "" {
+		if !cfg.SupportsRuntime(override) {
+			return Resolved{}, fmt.Errorf("model %q does not support runtime %q", modelName, override)
+		}
+		kind = override
+	} else {
+		switch {
+		case cfg.Ollama != nil:
+			kind = models.RuntimeOllama
+		case cfg.LlamaCpp != nil:
+			kind = models.RuntimeLlamaCpp
+		default:
+			return Resolved{}, fmt.Errorf("model %q has no supported runtime", modelName)
+		}
+	}
+
+	rt, err := newRuntime(kind)
+	if err != nil {
+		return Resolved{}, err
+	}
+
+	res := Resolved{Runtime: rt, Kind: kind}
+	switch kind {
+	case models.RuntimeOllama:
+		res.ModelTag = cfg.Ollama.Tag
+	case models.RuntimeLlamaCpp:
+		res.HFRepo = cfg.LlamaCpp.HFRepo
+		res.HFFile = cfg.LlamaCpp.HFFile
+	}
+	return res, nil
+}
+
+func newRuntime(r models.Runtime) (Runtime, error) {
 	switch r {
 	case models.RuntimeOllama:
 		return &OllamaRuntime{}, nil

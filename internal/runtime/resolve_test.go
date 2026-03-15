@@ -7,37 +7,46 @@ import (
 )
 
 func TestResolve_Default(t *testing.T) {
-	_, rt, err := Resolve("llama3.2:1b", "")
+	res, err := Resolve("llama3.2:1b", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rt != models.RuntimeOllama {
-		t.Errorf("default runtime = %q, want %q", rt, models.RuntimeOllama)
+	if res.Kind != models.RuntimeOllama {
+		t.Errorf("Kind = %q, want %q", res.Kind, models.RuntimeOllama)
+	}
+	if res.Runtime == nil {
+		t.Fatal("expected non-nil Runtime")
+	}
+	if res.ModelTag == "" {
+		t.Error("expected non-empty ModelTag for Ollama")
 	}
 }
 
 func TestResolve_Override(t *testing.T) {
-	cfg, rt, err := Resolve("llama3.2:1b", models.RuntimeLlamaCpp)
+	res, err := Resolve("llama3.2:1b", models.RuntimeLlamaCpp)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rt != models.RuntimeLlamaCpp {
-		t.Errorf("runtime = %q, want %q", rt, models.RuntimeLlamaCpp)
+	if res.Kind != models.RuntimeLlamaCpp {
+		t.Errorf("Kind = %q, want %q", res.Kind, models.RuntimeLlamaCpp)
 	}
-	if cfg.LlamaCpp == nil {
-		t.Fatal("expected non-nil LlamaCpp config")
+	if res.HFRepo == "" {
+		t.Error("expected non-empty HFRepo for LlamaCpp")
+	}
+	if res.HFFile == "" {
+		t.Error("expected non-empty HFFile for LlamaCpp")
 	}
 }
 
 func TestResolve_UnsupportedRuntime(t *testing.T) {
-	_, _, err := Resolve("llama3.2:1b", "vllm")
+	_, err := Resolve("llama3.2:1b", "vllm")
 	if err == nil {
 		t.Fatal("expected error for unsupported runtime")
 	}
 }
 
 func TestResolve_UnknownModel(t *testing.T) {
-	_, _, err := Resolve("nonexistent", "")
+	_, err := Resolve("nonexistent", "")
 	if err == nil {
 		t.Fatal("expected error for unknown model")
 	}

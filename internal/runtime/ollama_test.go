@@ -85,14 +85,14 @@ func TestOllamaPort(t *testing.T) {
 }
 
 func TestNewUnsupportedRuntime(t *testing.T) {
-	_, err := New(models.Runtime("unknown"))
+	_, err := newRuntime(models.Runtime("unknown"))
 	if err == nil {
 		t.Fatal("expected error for unsupported runtime")
 	}
 }
 
 func TestNewOllamaRuntime(t *testing.T) {
-	rt, err := New(models.RuntimeOllama)
+	rt, err := newRuntime(models.RuntimeOllama)
 	if err != nil {
 		t.Fatal(err)
 	}
