@@ -8,6 +8,7 @@ import (
 
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 
+	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/provider/aws/quota"
 	"github.com/havenapp/haven/internal/provider/mock"
@@ -22,9 +23,9 @@ func testProvider(region string) *AWSProvider {
 
 func TestEnsureQuota_NonGPUInstance(t *testing.T) {
 	p := &AWSProvider{}
-	err := p.EnsureQuota(context.Background(), "t3.large", nil)
+	err := p.EnsureQuota(context.Background(), "llama3.2:1b", models.Ollama, nil)
 	if err != nil {
-		t.Fatalf("expected nil error for non-GPU instance, got: %v", err)
+		t.Fatalf("expected nil error for non-GPU model, got: %v", err)
 	}
 }
 

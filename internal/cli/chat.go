@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,24 +14,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/havenapp/haven/internal/certutil"
+	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
+	rtm "github.com/havenapp/haven/internal/runtime"
 	"github.com/havenapp/haven/internal/tui"
 )
-
-type chatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type chatRequest struct {
-	Model    string        `json:"model"`
-	Messages []chatMessage `json:"messages"`
-}
-
-type chatStreamResponse struct {
-	Message chatMessage `json:"message"`
-	Done    bool        `json:"done"`
-}
 
 func newChatCmd(providerName *string) *cobra.Command {
 	cmd := &cobra.Command{
@@ -68,14 +54,14 @@ func runChat(ctx context.Context, prov provider.Provider, prompter provider.Prom
 		Transport: certutil.NewPinnedTransport(d.TLSFingerprint),
 	}
 
-	fmt.Printf("\033[1m%s\033[0m @ %s\n", d.Model, d.Endpoint)
+	fmt.Printf("\033[1m%s\033[0m [%s] @ %s\n", d.Model, d.Runtime, d.Endpoint)
 	fmt.Println("Type a message, or \"exit\" to quit.")
 	fmt.Println()
 
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
 	defer stop()
 
-	var history []chatMessage
+	var history []rtm.ChatMessage
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -92,7 +78,7 @@ func runChat(ctx context.Context, prov provider.Provider, prompter provider.Prom
 			return nil
 		}
 
-		history = append(history, chatMessage{Role: "user", Content: line})
+		history = append(history, rtm.ChatMessage{Role: "user", Content: line})
 
 		reply, err := streamChat(ctx, client, d, history)
 		if err != nil {
@@ -106,51 +92,22 @@ func runChat(ctx context.Context, prov provider.Provider, prompter provider.Prom
 			continue
 		}
 
-		history = append(history, chatMessage{Role: "assistant", Content: reply})
+		history = append(history, rtm.ChatMessage{Role: "assistant", Content: reply})
 	}
 }
 
-func resolveDeployment(ctx context.Context, prov provider.Provider, prompter provider.Prompter, id string) (*provider.Deployment, error) {
-	if id != "" {
-		d, err := prov.LoadDeployment(ctx, id)
-		if err != nil {
-			return nil, fmt.Errorf("load deployment: %w", err)
-		}
-		return d, nil
-	}
-
-	deployments, err := prov.List(ctx)
+func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment, history []rtm.ChatMessage) (string, error) {
+	rt, _, err := rtm.Resolve(d.Model, models.RuntimeName(d.Runtime))
 	if err != nil {
-		return nil, fmt.Errorf("list deployments: %w", err)
-	}
-	if len(deployments) == 0 {
-		return nil, fmt.Errorf("no active deployments — run 'haven deploy <model>' first")
-	}
-	if len(deployments) == 1 {
-		return &deployments[0], nil
+		return "", fmt.Errorf("resolve runtime: %w", err)
 	}
 
-	options := make([]string, len(deployments))
-	for i, d := range deployments {
-		options[i] = fmt.Sprintf("%s (%s)", d.ID, d.Model)
-	}
-	idx := prompter.Select("Select a deployment:", options)
-	if idx < 0 {
-		return nil, fmt.Errorf("no deployment selected")
-	}
-	return &deployments[idx], nil
-}
-
-func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment, history []chatMessage) (string, error) {
-	body, err := json.Marshal(chatRequest{
-		Model:    d.Model,
-		Messages: history,
-	})
+	body, err := rt.MarshalChatRequest(d.Model, history)
 	if err != nil {
 		return "", err
 	}
 
-	endpoint := fmt.Sprintf("https://%s:11434/api/chat", d.PublicIP)
+	endpoint := fmt.Sprintf("https://%s:11434%s", d.PublicIP, rt.ChatPath())
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(body))
 	if err != nil {
 		return "", err
@@ -172,28 +129,35 @@ func streamChat(ctx context.Context, client *http.Client, d *provider.Deployment
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
+
 	var full strings.Builder
 	first := true
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
-		var chunk chatStreamResponse
-		if err := json.Unmarshal(scanner.Bytes(), &chunk); err != nil {
+		token, done, err := rt.ParseChatToken(scanner.Bytes())
+		if err != nil {
 			spin.Stop()
-			return "", fmt.Errorf("decode stream: %w", err)
+			return "", err
+		}
+		if done {
+			break
+		}
+		if token == "" {
+			continue
 		}
 		if first {
 			spin.Stop()
 			fmt.Print("\033[36m")
 			first = false
 		}
-		if chunk.Done {
-			break
-		}
-		fmt.Print(chunk.Message.Content)
-		full.WriteString(chunk.Message.Content)
+		fmt.Print(token)
+		full.WriteString(token)
 	}
 	if err := scanner.Err(); err != nil {
 		return "", err
+	}
+	if first {
+		spin.Stop()
 	}
 	fmt.Print("\033[0m")
 	fmt.Println()

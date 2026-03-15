@@ -12,11 +12,7 @@ import (
 	"github.com/havenapp/haven/internal/models"
 )
 
-func init() {
-	pollInterval = 10 * time.Millisecond
-}
-
-func TestOllamaWaitForReady_Success(t *testing.T) {
+func TestLlamaCppWaitForReady_Success(t *testing.T) {
 	var calls int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := atomic.AddInt32(&calls, 1)
@@ -28,12 +24,12 @@ func TestOllamaWaitForReady_Success(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"models":[{"name":"llama3.2:1b"}]}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	}))
 	defer srv.Close()
 
-	rt := &OllamaRuntime{}
-	err := rt.waitForReadyWithClient(context.Background(), srv.Client(), srv.URL, "llama3.2:1b", "test-key", io.Discard, 5*time.Second)
+	rt := &LlamaCppRuntime{}
+	err := rt.waitForReadyWithClient(context.Background(), srv.Client(), srv.URL, "test-key", io.Discard, 5*time.Second)
 	if err != nil {
 		t.Fatalf("expected nil, got %v", err)
 	}
@@ -42,14 +38,14 @@ func TestOllamaWaitForReady_Success(t *testing.T) {
 	}
 }
 
-func TestOllamaWaitForReady_Timeout(t *testing.T) {
+func TestLlamaCppWaitForReady_Timeout(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(503)
 	}))
 	defer srv.Close()
 
-	rt := &OllamaRuntime{}
-	err := rt.waitForReadyWithClient(context.Background(), srv.Client(), srv.URL, "llama3.2:1b", "test-key", io.Discard, 50*time.Millisecond)
+	rt := &LlamaCppRuntime{}
+	err := rt.waitForReadyWithClient(context.Background(), srv.Client(), srv.URL, "test-key", io.Discard, 50*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}
@@ -58,17 +54,17 @@ func TestOllamaWaitForReady_Timeout(t *testing.T) {
 	}
 }
 
-func TestOllamaWaitForReady_ContextCancelled(t *testing.T) {
+func TestLlamaCppWaitForReady_ContextCancelled(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(503)
 	}))
 	defer srv.Close()
 
-	rt := &OllamaRuntime{}
+	rt := &LlamaCppRuntime{}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := rt.waitForReadyWithClient(ctx, srv.Client(), srv.URL, "llama3.2:1b", "test-key", io.Discard, 5*time.Second)
+	err := rt.waitForReadyWithClient(ctx, srv.Client(), srv.URL, "test-key", io.Discard, 5*time.Second)
 	if err == nil {
 		t.Fatal("expected context error")
 	}
@@ -77,22 +73,15 @@ func TestOllamaWaitForReady_ContextCancelled(t *testing.T) {
 	}
 }
 
-func TestOllamaPort(t *testing.T) {
-	rt := &OllamaRuntime{}
+func TestLlamaCppPort(t *testing.T) {
+	rt := &LlamaCppRuntime{}
 	if rt.Port() != 11434 {
 		t.Fatalf("expected 11434, got %d", rt.Port())
 	}
 }
 
-func TestNewUnsupportedRuntime(t *testing.T) {
-	_, err := newRuntime(models.RuntimeName("unknown"))
-	if err == nil {
-		t.Fatal("expected error for unsupported runtime")
-	}
-}
-
-func TestNewOllamaRuntime(t *testing.T) {
-	rt, err := newRuntime(models.Ollama)
+func TestNewLlamaCppRuntime(t *testing.T) {
+	rt, err := newRuntime(models.LlamaCpp)
 	if err != nil {
 		t.Fatal(err)
 	}

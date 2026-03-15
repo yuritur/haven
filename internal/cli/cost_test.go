@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/provider/mock"
 )
@@ -132,7 +133,7 @@ func (p *noCostProvider) LoadDeployment(ctx context.Context, id string) (*provid
 }
 func (p *noCostProvider) SaveDeployment(context.Context, provider.Deployment) error { return nil }
 func (p *noCostProvider) DeleteDeployment(context.Context, string) error            { return nil }
-func (p *noCostProvider) EnsureQuota(context.Context, string, provider.Prompter) error {
+func (p *noCostProvider) EnsureQuota(context.Context, string, models.RuntimeName, provider.Prompter) error {
 	return nil
 }
 func (p *noCostProvider) Deploy(context.Context, provider.DeployInput) (provider.DeployResult, error) {

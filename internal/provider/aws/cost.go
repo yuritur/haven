@@ -16,8 +16,12 @@ var _ provider.CostEstimator = (*AWSProvider)(nil)
 // it returns a partial estimate (with Uptime set) and an error.
 func (p *AWSProvider) EstimateCost(_ context.Context, d provider.Deployment) (*provider.CostEstimate, error) {
 	ebsGB := 30
-	if mc, err := models.Lookup(d.Model); err == nil {
-		ebsGB = mc.EBSVolumeGB
+	rt := models.Ollama
+	if d.Runtime != "" {
+		rt = models.RuntimeName(d.Runtime)
+	}
+	if spec, err := ResolveInstance(d.Model, rt); err == nil {
+		ebsGB = spec.EBSVolumeGB
 	}
 
 	now := time.Now()
@@ -40,8 +44,12 @@ func (p *AWSProvider) EstimateCost(_ context.Context, d provider.Deployment) (*p
 // hours are counted; EBS and EIP are projected for the full month.
 func (p *AWSProvider) ProjectCost(_ context.Context, d provider.Deployment) (*provider.CostEstimate, error) {
 	ebsGB := 30
-	if mc, err := models.Lookup(d.Model); err == nil {
-		ebsGB = mc.EBSVolumeGB
+	rt := models.Ollama
+	if d.Runtime != "" {
+		rt = models.RuntimeName(d.Runtime)
+	}
+	if spec, err := ResolveInstance(d.Model, rt); err == nil {
+		ebsGB = spec.EBSVolumeGB
 	}
 
 	now := time.Now()

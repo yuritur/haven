@@ -28,26 +28,27 @@ type Identity struct {
 
 type DeployInput struct {
 	DeploymentID   string
-	Runtime        models.Runtime
-	ModelTag       string
-	InstanceType   string
+	Runtime        models.RuntimeName
+	Model          string
 	UserIP         string
 	APIKey         string
 	TLSCert        string
 	TLSKey         string
 	TLSFingerprint string
-	EBSVolumeGB    int
 }
 
 type DeployResult struct {
-	ProviderRef string
-	InstanceID  string
-	PublicIP    string
+	ProviderRef  string
+	InstanceID   string
+	PublicIP     string
+	InstanceType string
+	GPU          bool
 }
 
 type Deployment struct {
 	ID           string    `json:"deployment_id"`
 	Provider     string    `json:"provider"`
+	Runtime      string    `json:"runtime,omitempty"`
 	ProviderRef  string    `json:"provider_ref"`
 	CreatedAt    time.Time `json:"created_at"`
 	Region       string    `json:"region"`
@@ -70,7 +71,7 @@ type Provider interface {
 	LoadDeployment(ctx context.Context, id string) (*Deployment, error)
 	SaveDeployment(ctx context.Context, d Deployment) error
 	DeleteDeployment(ctx context.Context, id string) error
-	EnsureQuota(ctx context.Context, instanceType string, prompter Prompter) error
+	EnsureQuota(ctx context.Context, model string, runtime models.RuntimeName, prompter Prompter) error
 	Deploy(ctx context.Context, input DeployInput) (DeployResult, error)
 	Destroy(ctx context.Context, providerRef string) error
 	Stop(ctx context.Context, instanceID string) error

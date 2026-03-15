@@ -24,10 +24,11 @@ import (
 )
 
 func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
-	return &cobra.Command{
+	var runtimeFlag string
+	cmd := &cobra.Command{
 		Use:     "deploy <model>",
 		Short:   "Deploy a model to your cloud",
-		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --provider aws",
+		Example: "  haven deploy llama3.2:1b\n  haven deploy phi3:mini --runtime llamacpp",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
 				return fmt.Errorf("missing model name\n\n  Usage: haven deploy <model>\n  Example: haven deploy llama3.2:1b")
@@ -44,18 +45,15 @@ func newDeployCmd(providerName *string, verbose *bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runDeploy(cmd.Context(), prov, *providerName, args[0], *verbose, out, prompter)
+			return runDeploy(cmd.Context(), prov, *providerName, args[0], runtimeFlag, *verbose, out, prompter)
 		},
 	}
+	cmd.Flags().StringVar(&runtimeFlag, "runtime", "", "serving runtime: llamacpp (default) or ollama")
+	return cmd
 }
 
-func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, verbose bool, out io.Writer, prompter provider.Prompter) error {
-	modelCfg, err := models.Lookup(modelName)
-	if err != nil {
-		return err
-	}
-
-	rt, err := runtime.New(modelCfg.Runtime)
+func runDeploy(ctx context.Context, prov provider.Provider, providerName string, modelName string, runtimeFlag string, verbose bool, out io.Writer, prompter provider.Prompter) error {
+	runtime, runtimeKind, err := runtime.Resolve(modelName, models.RuntimeName(runtimeFlag))
 	if err != nil {
 		return err
 	}
@@ -89,7 +87,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("generate deployment ID: %w", err)
 	}
 
-	err = prov.EnsureQuota(ctx, modelCfg.InstanceType, prompter)
+	err = prov.EnsureQuota(ctx, modelName, runtimeKind, prompter)
 	switch {
 	case errors.Is(err, provider.ErrQuotaUserExit):
 		return nil
@@ -97,7 +95,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return err
 	}
 
-	fmt.Printf("\033[33mDeploying\033[0m %s on %s (id: %s)...\n\n", modelName, modelCfg.InstanceType, deploymentID)
+	fmt.Printf("\033[33mDeploying\033[0m %s [%s] (id: %s)...\n\n", modelName, runtimeKind, deploymentID)
 
 	sigCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -122,15 +120,13 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 
 	result, err := prov.Deploy(sigCtx, provider.DeployInput{
 		DeploymentID:   deploymentID,
-		Runtime:        modelCfg.Runtime,
-		ModelTag:       modelCfg.Tag,
-		InstanceType:   modelCfg.InstanceType,
+		Runtime:        runtimeKind,
+		Model:          modelName,
 		UserIP:         userIP + "/32",
 		APIKey:         apiKey,
 		TLSCert:        tlsCert,
 		TLSKey:         tlsKey,
 		TLSFingerprint: tlsFingerprint,
-		EBSVolumeGB:    modelCfg.EBSVolumeGB,
 	})
 
 	if spin != nil {
@@ -144,16 +140,19 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("deploy: %w", err)
 	}
 
-	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, rt.Port())
+	fmt.Printf("\033[33mUsing instance:\033[0m %s\n", result.InstanceType)
+
+	endpoint := fmt.Sprintf("https://%s:%d", result.PublicIP, runtime.Port())
 
 	deployment := provider.Deployment{
 		ID:             deploymentID,
 		Provider:       providerName,
+		Runtime:        string(runtimeKind),
 		ProviderRef:    result.ProviderRef,
 		CreatedAt:      time.Now().UTC(),
 		Region:         identity.Region,
 		Model:          modelName,
-		InstanceType:   modelCfg.InstanceType,
+		InstanceType:   result.InstanceType,
 		InstanceID:     result.InstanceID,
 		PublicIP:       result.PublicIP,
 		Endpoint:       endpoint + "/v1",
@@ -166,18 +165,22 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 		return fmt.Errorf("save state: %w", err)
 	}
 
-	fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)
+	if runtimeKind == models.LlamaCpp {
+		fmt.Printf("Instance up at %s. Waiting for model...\n", result.PublicIP)
+	} else {
+		fmt.Printf("Instance up at %s. Pulling model...\n", result.PublicIP)
+	}
 
 	if !verbose {
 		spin = tui.StartSpinner("Waiting for model to be ready...")
 	}
 
 	pollTimeout := 15 * time.Minute
-	if models.IsGPUInstance(modelCfg.InstanceType) {
+	if result.GPU {
 		pollTimeout = 30 * time.Minute
 	}
 
-	if err := rt.WaitForReady(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
+	if err := runtime.WaitForReady(sigCtx, endpoint, modelName, apiKey, tlsFingerprint, out, pollTimeout); err != nil {
 		if spin != nil {
 			spin.Stop()
 		}
@@ -204,6 +207,7 @@ func runDeploy(ctx context.Context, prov provider.Provider, providerName string,
 
 	fmt.Printf("\n\033[33mDeployment ready!\033[0m\n")
 	fmt.Printf("  Endpoint : %s\n", deployment.Endpoint)
+	fmt.Printf("  Runtime  : %s\n", deployment.Runtime)
 	fmt.Printf("  API Key  : %s\n", deployment.APIKey)
 	fmt.Printf("  TLS Cert : %s\n", certFile)
 	fmt.Printf("  ID       : %s\n\n", deployment.ID)

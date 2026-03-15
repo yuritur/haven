@@ -11,9 +11,36 @@ import (
 	"github.com/havenapp/haven/internal/certutil"
 )
 
+type ollamaChatRequest struct {
+	Model    string        `json:"model"`
+	Messages []ChatMessage `json:"messages"`
+}
+
+type ollamaChatStreamResponse struct {
+	Message ChatMessage `json:"message"`
+	Done    bool        `json:"done"`
+}
+
 type OllamaRuntime struct{}
 
 func (o *OllamaRuntime) Port() int { return 11434 }
+
+func (o *OllamaRuntime) ChatPath() string { return "/api/chat" }
+
+func (o *OllamaRuntime) MarshalChatRequest(model string, history []ChatMessage) ([]byte, error) {
+	return json.Marshal(ollamaChatRequest{Model: model, Messages: history})
+}
+
+func (o *OllamaRuntime) ParseChatToken(line []byte) (string, bool, error) {
+	var chunk ollamaChatStreamResponse
+	if err := json.Unmarshal(line, &chunk); err != nil {
+		return "", false, fmt.Errorf("decode stream: %w", err)
+	}
+	if chunk.Done {
+		return "", true, nil
+	}
+	return chunk.Message.Content, false, nil
+}
 
 func (o *OllamaRuntime) WaitForReady(ctx context.Context, endpoint, model, apiKey, tlsFingerprint string, verbose io.Writer, timeout time.Duration) error {
 	client := &http.Client{

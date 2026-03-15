@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
 )
 
@@ -17,7 +18,7 @@ type Provider struct {
 	LoadDeploymentFn   func(ctx context.Context, id string) (*provider.Deployment, error)
 	SaveDeploymentFn   func(ctx context.Context, d provider.Deployment) error
 	DeleteDeploymentFn func(ctx context.Context, id string) error
-	EnsureQuotaFn      func(ctx context.Context, instanceType string, prompter provider.Prompter) error
+	EnsureQuotaFn      func(ctx context.Context, model string, runtime models.RuntimeName, prompter provider.Prompter) error
 	DeployFn           func(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error)
 	DestroyFn          func(ctx context.Context, providerRef string) error
 	StopFn             func(ctx context.Context, instanceID string) error
@@ -33,11 +34,11 @@ func (m *Provider) Identity(ctx context.Context) (provider.Identity, error) {
 	return m.IdentityFn(ctx)
 }
 
-func (m *Provider) EnsureQuota(ctx context.Context, instanceType string, prompter provider.Prompter) error {
+func (m *Provider) EnsureQuota(ctx context.Context, model string, runtime models.RuntimeName, prompter provider.Prompter) error {
 	if m.EnsureQuotaFn == nil {
 		return nil
 	}
-	return m.EnsureQuotaFn(ctx, instanceType, prompter)
+	return m.EnsureQuotaFn(ctx, model, runtime, prompter)
 }
 
 func (m *Provider) Deploy(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error) {

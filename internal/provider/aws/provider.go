@@ -7,6 +7,7 @@ import (
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 
+	"github.com/havenapp/haven/internal/models"
 	"github.com/havenapp/haven/internal/provider"
 	"github.com/havenapp/haven/internal/provider/aws/cfn"
 	"github.com/havenapp/haven/internal/provider/aws/quota"
@@ -67,25 +68,49 @@ func (p *AWSProvider) DeleteDeployment(ctx context.Context, id string) error {
 }
 
 func (p *AWSProvider) Deploy(ctx context.Context, input provider.DeployInput) (provider.DeployResult, error) {
+	spec, err := ResolveInstance(input.Model, input.Runtime)
+	if err != nil {
+		return provider.DeployResult{}, err
+	}
+
+	modelCfg, err := models.Lookup(input.Model)
+	if err != nil {
+		return provider.DeployResult{}, err
+	}
+
+	var modelTag, hfRepo, hfFile string
+	switch input.Runtime {
+	case models.Ollama:
+		modelTag = modelCfg.Ollama.Tag
+	case models.LlamaCpp:
+		hfRepo = modelCfg.LlamaCpp.HFRepo
+		hfFile = modelCfg.LlamaCpp.HFFile
+	}
+
 	result, err := cfn.Deploy(ctx, p.cfg, cfn.DeployInput{
 		StackName:    input.DeploymentID,
 		Runtime:      input.Runtime,
-		ModelTag:     input.ModelTag,
-		InstanceType: input.InstanceType,
+		ModelTag:     modelTag,
+		InstanceType: spec.InstanceType,
 		UserIP:       input.UserIP,
 		APIKey:       input.APIKey,
 		TLSCert:      input.TLSCert,
 		TLSKey:       input.TLSKey,
-		EBSVolumeGB:  input.EBSVolumeGB,
+		EBSVolumeGB:  spec.EBSVolumeGB,
+		HFRepo:       hfRepo,
+		HFFile:       hfFile,
+		GPU:          spec.GPU,
 		Out:          p.out,
 	})
 	if err != nil {
 		return provider.DeployResult{}, err
 	}
 	return provider.DeployResult{
-		ProviderRef: result.StackName,
-		InstanceID:  result.InstanceID,
-		PublicIP:    result.PublicIP,
+		ProviderRef:  result.StackName,
+		InstanceID:   result.InstanceID,
+		PublicIP:     result.PublicIP,
+		InstanceType: spec.InstanceType,
+		GPU:          spec.GPU,
 	}, nil
 }
 

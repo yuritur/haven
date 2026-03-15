@@ -7,19 +7,17 @@ import (
 
 func TestLookup_Known(t *testing.T) {
 	cases := []struct {
-		name         string
-		wantRuntime  Runtime
-		wantTag      string
-		wantInstance string
-		wantRAM      int
-		wantEBS      int
+		name       string
+		wantTag    string
+		wantHFRepo string
+		wantHFFile string
 	}{
-		{"llama3.2:1b", RuntimeOllama, "llama3.2:1b", "t3.large", 8, 30},
-		{"llama3.2:3b", RuntimeOllama, "llama3.2:3b", "t3.xlarge", 16, 30},
-		{"phi3:mini", RuntimeOllama, "phi3:mini", "t3.large", 8, 30},
-		{"qwen3.5:4b", RuntimeOllama, "qwen3.5:4b", "g5.xlarge", 16, 80},
-		{"qwen3.5:9b", RuntimeOllama, "qwen3.5:9b", "g5.xlarge", 16, 100},
-		{"qwen3.5:27b", RuntimeOllama, "qwen3.5:27b", "g5.2xlarge", 32, 100},
+		{"llama3.2:1b", "llama3.2:1b", "bartowski/Llama-3.2-1B-Instruct-GGUF", "Llama-3.2-1B-Instruct-Q4_K_M.gguf"},
+		{"llama3.2:3b", "llama3.2:3b", "bartowski/Llama-3.2-3B-Instruct-GGUF", "Llama-3.2-3B-Instruct-Q4_K_M.gguf"},
+		{"phi3:mini", "phi3:mini", "bartowski/Phi-3-mini-4k-instruct-GGUF", "Phi-3-mini-4k-instruct-Q4_K_M.gguf"},
+		{"qwen3.5:4b", "qwen3.5:4b", "Qwen/Qwen2.5-3B-Instruct-GGUF", "qwen2.5-3b-instruct-q4_k_m.gguf"},
+		{"qwen3.5:9b", "qwen3.5:9b", "Qwen/Qwen2.5-7B-Instruct-GGUF", "qwen2.5-7b-instruct-q4_k_m.gguf"},
+		{"qwen3.5:27b", "qwen3.5:27b", "Qwen/Qwen2.5-32B-Instruct-GGUF", "qwen2.5-32b-instruct-q4_k_m.gguf"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -27,20 +25,20 @@ func TestLookup_Known(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Lookup(%q) returned error: %v", tc.name, err)
 			}
-			if cfg.Runtime != tc.wantRuntime {
-				t.Errorf("Runtime = %q, want %q", cfg.Runtime, tc.wantRuntime)
+			if cfg.Ollama == nil {
+				t.Fatal("expected non-nil Ollama config")
 			}
-			if cfg.Tag != tc.wantTag {
-				t.Errorf("Tag = %q, want %q", cfg.Tag, tc.wantTag)
+			if cfg.Ollama.Tag != tc.wantTag {
+				t.Errorf("Ollama.Tag = %q, want %q", cfg.Ollama.Tag, tc.wantTag)
 			}
-			if cfg.InstanceType != tc.wantInstance {
-				t.Errorf("InstanceType = %q, want %q", cfg.InstanceType, tc.wantInstance)
+			if cfg.LlamaCpp == nil {
+				t.Fatal("expected non-nil LlamaCpp config")
 			}
-			if cfg.MinRAMGB != tc.wantRAM {
-				t.Errorf("MinRAMGB = %d, want %d", cfg.MinRAMGB, tc.wantRAM)
+			if cfg.LlamaCpp.HFRepo != tc.wantHFRepo {
+				t.Errorf("LlamaCpp.HFRepo = %q, want %q", cfg.LlamaCpp.HFRepo, tc.wantHFRepo)
 			}
-			if cfg.EBSVolumeGB != tc.wantEBS {
-				t.Errorf("EBSVolumeGB = %d, want %d", cfg.EBSVolumeGB, tc.wantEBS)
+			if cfg.LlamaCpp.HFFile != tc.wantHFFile {
+				t.Errorf("LlamaCpp.HFFile = %q, want %q", cfg.LlamaCpp.HFFile, tc.wantHFFile)
 			}
 		})
 	}
@@ -69,24 +67,55 @@ func TestList(t *testing.T) {
 	}
 }
 
-func TestIsGPUInstance(t *testing.T) {
+func TestSupportsRuntime(t *testing.T) {
 	cases := []struct {
-		instanceType string
-		want         bool
+		name    string
+		config  Config
+		runtime RuntimeName
+		want    bool
 	}{
-		{"g5.xlarge", true},
-		{"g5.2xlarge", true},
-		{"g4dn.xlarge", true},
-		{"p3.2xlarge", true},
-		{"t3.large", false},
-		{"t3.xlarge", false},
-		{"m5.large", false},
+		{
+			"ollama supported",
+			Config{Ollama: &OllamaConfig{Tag: "test"}},
+			Ollama,
+			true,
+		},
+		{
+			"llamacpp supported",
+			Config{LlamaCpp: &LlamaCppConfig{HFRepo: "r", HFFile: "f"}},
+			LlamaCpp,
+			true,
+		},
+		{
+			"ollama not supported",
+			Config{LlamaCpp: &LlamaCppConfig{HFRepo: "r", HFFile: "f"}},
+			Ollama,
+			false,
+		},
+		{
+			"llamacpp not supported",
+			Config{Ollama: &OllamaConfig{Tag: "test"}},
+			LlamaCpp,
+			false,
+		},
+		{
+			"both supported ollama",
+			Config{Ollama: &OllamaConfig{Tag: "test"}, LlamaCpp: &LlamaCppConfig{HFRepo: "r", HFFile: "f"}},
+			Ollama,
+			true,
+		},
+		{
+			"unknown runtime",
+			Config{Ollama: &OllamaConfig{Tag: "test"}},
+			RuntimeName("vllm"),
+			false,
+		},
 	}
 	for _, tc := range cases {
-		t.Run(tc.instanceType, func(t *testing.T) {
-			got := IsGPUInstance(tc.instanceType)
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.config.SupportsRuntime(tc.runtime)
 			if got != tc.want {
-				t.Errorf("IsGPUInstance(%q) = %v, want %v", tc.instanceType, got, tc.want)
+				t.Errorf("SupportsRuntime(%q) = %v, want %v", tc.runtime, got, tc.want)
 			}
 		})
 	}

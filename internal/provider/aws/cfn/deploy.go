@@ -18,7 +18,7 @@ import (
 
 type DeployInput struct {
 	StackName    string
-	Runtime      models.Runtime
+	Runtime      models.RuntimeName
 	ModelTag     string
 	InstanceType string
 	UserIP       string
@@ -26,6 +26,9 @@ type DeployInput struct {
 	TLSCert      string
 	TLSKey       string
 	EBSVolumeGB  int
+	HFRepo       string
+	HFFile       string
+	GPU          bool
 	Out          io.Writer
 }
 
@@ -45,6 +48,9 @@ func Deploy(ctx context.Context, cfg aws.Config, input DeployInput) (DeployResul
 		TLSCert:      input.TLSCert,
 		TLSKey:       input.TLSKey,
 		EBSVolumeGB:  input.EBSVolumeGB,
+		HFRepo:       input.HFRepo,
+		HFFile:       input.HFFile,
+		GPU:          input.GPU,
 	})
 	if err != nil {
 		return DeployResult{}, fmt.Errorf("generate template: %w", err)
